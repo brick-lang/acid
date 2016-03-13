@@ -1,20 +1,16 @@
 #include "bit.h"
 #include "cppspec.hpp"
 
-describe bit_spec("Bit tests", _blk{
-    it("ZERO flips to ONE", _blk{
-        expect(bit_flip(ZERO)).to_equal(ONE)();
-      });
+describe bit_spec("Bit tests", _blk {
+  it("BIT_ZERO flips to BIT_ONE",
+     _blk { expect(bit_flip(BIT_ZERO)).to_equal(BIT_ONE)(); });
 
-    it("ONE flips to ZERO", _blk{
-        expect(bit_flip(ONE)).to_equal(ZERO)();
-      });
+  it("BIT_ONE flips to BIT_ZERO",
+     _blk { expect(bit_flip(BIT_ONE)).to_equal(BIT_ZERO)(); });
 
-    it("0's value to be ZERO", _blk{
-        expect(bit_value_of(0)).to_equal(ZERO)();
-      });
+  it("0's value to be BIT_ZERO",
+     _blk { expect(bit_value_of(0)).to_equal(BIT_ZERO)(); });
 
-    it("1's value to be ONE", _blk{
-        expect(bit_value_of(1)).to_equal(ONE)();
-      });
-  });
+  it("1's value to be BIT_ONE",
+     _blk { expect(bit_value_of(1)).to_equal(BIT_ONE)(); });
+});

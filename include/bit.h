@@ -8,17 +8,12 @@
 extern "C" {
 #endif
 
-
 /**
  * Keeps track of the state of the "which" bit. */
-typedef enum {
-  ZERO = 0,
-  ONE = 1
-} Bit;
+typedef enum { BIT_ZERO = 0, BIT_ONE = 1 } bit_t;
 
-
-Bit bit_flip(Bit b);
-Bit bit_value_of(int n);
+bit_t bit_flip(bit_t b);
+bit_t bit_value_of(int n);
 
 #ifdef __cplusplus
 }

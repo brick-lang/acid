@@ -1,20 +1,23 @@
 #include "bit.h"
 
-Bit bit_flip(Bit b) {
+bit_t bit_flip(bit_t b) {
   switch (b) {
-    case ZERO:
-      return ONE;
-    case ONE:
-      return ZERO;
+    case BIT_ZERO:
+      return BIT_ONE;
+    case BIT_ONE:
+      return BIT_ZERO;
+    default:
+      printf("Fatal error: Bit.flip of non-bit");
+      exit(-1);
   }
 }
 
-Bit bit_value_of(int n) {
+bit_t bit_value_of(int n) {
   switch (n) {
     case 0:
-      return ZERO;
+      return BIT_ZERO;
     case 1:
-      return ONE;
+      return BIT_ONE;
     default:
       printf("Fatal error: Bit.value_of of non-i1:%d", n);
       exit(-1);

@@ -1,6 +1,6 @@
 project( BrandtGC )
 
-cmake_minimum_required( VERSION 3.0 )
+cmake_minimum_required( VERSION 3.1 )
 
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Wall -Werror")
@@ -16,6 +16,8 @@ if ( BUILD_TESTS )
 
   # C++Spec library
   add_subdirectory( cppspec )
+
+  enable_testing ()
 
   # Tests
   add_subdirectory( spec )

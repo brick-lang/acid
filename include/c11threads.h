@@ -38,7 +38,7 @@ typedef struct {
   long nsec;
 } xtime;
 
-enum { mtx_plain = 0, mtx_recursive = 1, mtx_timed = 2, mtx_try = 4 };
+enum { mtx_plain = 0, mtx_recursive = 1, /* mtx_timed = 2, */ mtx_try = 4 };
 
 enum { thrd_success, thrd_busy, thrd_error, thrd_nomem };
 
@@ -102,9 +102,9 @@ static inline int mtx_init(mtx_t *mtx, int type) {
   if (type & mtx_try) {
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
   }
-  if (type & mtx_timed) {
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_TIMED_NP);
-  }
+  /* if (type & mtx_timed) { */
+  /*   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_TIMED_NP); */
+  /* } */
   if (type & mtx_recursive) {
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
   }
@@ -132,18 +132,18 @@ static inline int mtx_trylock(mtx_t *mtx) {
   return res == 0 ? thrd_success : thrd_error;
 }
 
-static inline int mtx_timedlock(mtx_t *mtx, const xtime *xt) {
-  int res;
-  struct timespec ts;
+/* static inline int mtx_timedlock(mtx_t *mtx, const xtime *xt) { */
+/*   int res; */
+/*   struct timespec ts; */
 
-  ts.tv_sec = (long)xt->sec;
-  ts.tv_nsec = xt->nsec;
+/*   ts.tv_sec = (long)xt->sec; */
+/*   ts.tv_nsec = xt->nsec; */
 
-  if ((res = pthread_mutex_timedlock(mtx, &ts)) == EBUSY) {
-    return thrd_busy;
-  }
-  return res == 0 ? thrd_success : thrd_error;
-}
+/*   if ((res = pthread_mutex_timedlock(mtx, &ts)) == EBUSY) { */
+/*     return thrd_busy; */
+/*   } */
+/*   return res == 0 ? thrd_success : thrd_error; */
+/* } */
 
 static inline int mtx_unlock(mtx_t *mtx) {
   return pthread_mutex_unlock(mtx) == 0 ? thrd_success : thrd_error;

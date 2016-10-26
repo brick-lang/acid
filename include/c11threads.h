@@ -1,11 +1,11 @@
 /*
-Author: John Tsiombikas <nuclear@member.fsf.org>
+  Author: John Tsiombikas <nuclear@member.fsf.org>
 
-I place this piece of code in the public domain. Feel free to use as you see
-fit.  I'd appreciate it if you keep my name at the top of the code somehwere,
-but whatever.
+  I place this piece of code in the public domain. Feel free to use as you see
+  fit.  I'd appreciate it if you keep my name at the top of the code somehwere,
+  but whatever.
 
-Main project site: https://github.com/jtsiomb/c11threads
+  Main project site: https://github.com/jtsiomb/c11threads
 */
 
 /* TODO: port to MacOSX: no timed mutexes under macosx...
@@ -15,11 +15,13 @@ Main project site: https://github.com/jtsiomb/c11threads
 #ifndef C11THREADS_H_
 #define C11THREADS_H_
 
-#include <time.h>
+#define _GNU_SOURCE
+
 #include <errno.h>
 #include <pthread.h>
 #include <sched.h> /* for sched_yield */
 #include <sys/time.h>
+#include <time.h>
 
 #define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 
@@ -30,17 +32,16 @@ typedef pthread_cond_t cnd_t;
 typedef pthread_key_t tss_t;
 typedef pthread_once_t once_flag;
 
-typedef void (*thrd_start_t)(void *);
+typedef int (*thrd_start_t)(void *);
 typedef void (*tss_dtor_t)(void *);
 
-typedef struct {
-  time_t sec;
-  long nsec;
-} xtime;
+enum {
+  mtx_plain = 0,
+  mtx_recursive = 1,
+  mtx_timed = 2,
+};
 
-enum { mtx_plain = 0, mtx_recursive = 1, /* mtx_timed = 2, */ mtx_try = 4 };
-
-enum { thrd_success, thrd_busy, thrd_error, thrd_nomem };
+enum { thrd_success, thrd_timedout, thrd_busy, thrd_error, thrd_nomem };
 
 /* ---- thread management ---- */
 
@@ -75,17 +76,19 @@ static inline thrd_t thrd_current(void) { return pthread_self(); }
 
 static inline int thrd_equal(thrd_t a, thrd_t b) { return pthread_equal(a, b); }
 
-static inline void thrd_sleep(const xtime *xt) {
+static inline void thrd_sleep(const struct timespec *ts_in,
+                              struct timespec *rem_out) {
   int res;
-  struct timespec ts;
-  ts.tv_sec = (long)xt->sec;
-  ts.tv_nsec = xt->nsec;
+  struct timespec rem, ts = *ts_in;
 
   do {
-    struct timespec rem;
     res = nanosleep(&ts, &rem);
     ts = rem;
   } while (res == -1 && errno == EINTR);
+
+  if (rem_out) {
+    *rem_out = rem;
+  }
 }
 
 static inline void thrd_yield(void) { sched_yield(); }
@@ -98,13 +101,9 @@ static inline int mtx_init(mtx_t *mtx, int type) {
 
   pthread_mutexattr_init(&attr);
 
-  /* XXX I don't think these are exactly correct semantics */
-  if (type & mtx_try) {
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+  if (type & mtx_timed) {
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_TIMED_NP);
   }
-  /* if (type & mtx_timed) { */
-  /*   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_TIMED_NP); */
-  /* } */
   if (type & mtx_recursive) {
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
   }
@@ -132,18 +131,14 @@ static inline int mtx_trylock(mtx_t *mtx) {
   return res == 0 ? thrd_success : thrd_error;
 }
 
-/* static inline int mtx_timedlock(mtx_t *mtx, const xtime *xt) { */
-/*   int res; */
-/*   struct timespec ts; */
+static inline int mtx_timedlock(mtx_t *mtx, const struct timespec *ts) {
+  int res;
 
-/*   ts.tv_sec = (long)xt->sec; */
-/*   ts.tv_nsec = xt->nsec; */
-
-/*   if ((res = pthread_mutex_timedlock(mtx, &ts)) == EBUSY) { */
-/*     return thrd_busy; */
-/*   } */
-/*   return res == 0 ? thrd_success : thrd_error; */
-/* } */
+  if ((res = pthread_mutex_timedlock(mtx, ts)) == ETIMEDOUT) {
+    return thrd_timedout;
+  }
+  return res == 0 ? thrd_success : thrd_error;
+}
 
 static inline int mtx_unlock(mtx_t *mtx) {
   return pthread_mutex_unlock(mtx) == 0 ? thrd_success : thrd_error;
@@ -169,15 +164,12 @@ static inline int cnd_wait(cnd_t *cond, mtx_t *mtx) {
   return pthread_cond_wait(cond, mtx) == 0 ? thrd_success : thrd_error;
 }
 
-static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const xtime *xt) {
+static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx,
+                                const struct timespec *ts) {
   int res;
-  struct timespec ts;
 
-  ts.tv_sec = (long)xt->sec;
-  ts.tv_nsec = xt->nsec;
-
-  if ((res = pthread_cond_timedwait(cond, mtx, &ts)) != 0) {
-    return res == ETIMEDOUT ? thrd_busy : thrd_error;
+  if ((res = pthread_cond_timedwait(cond, mtx, ts)) != 0) {
+    return res == ETIMEDOUT ? thrd_timedout : thrd_error;
   }
   return thrd_success;
 }
@@ -202,15 +194,17 @@ static inline void call_once(once_flag *flag, void (*func)(void)) {
   pthread_once(flag, func);
 }
 
+#if __STDC_VERSION__ < 201112L
 /* TODO take base into account */
-static inline int xtime_get(xtime *xt, int base) {
+static inline int timespec_get(struct timespec *ts, int base) {
   struct timeval tv;
 
   gettimeofday(&tv, 0);
 
-  xt->sec = tv.tv_sec;
-  xt->nsec = tv.tv_usec * 1000;
+  ts->tv_sec = tv.tv_sec;
+  ts->tv_nsec = tv.tv_usec * 1000;
   return base;
 }
+#endif /* not C11 */
 
 #endif /* C11THREADS_H_ */

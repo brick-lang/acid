@@ -1,43 +1,43 @@
-language: cpp
+# language: cpp
 
-compiler:
-  - clang
-  - gcc
+# compiler:
+#   - clang
+#   - gcc
 
-before_install:
-  - git submodule update --init --recursive
-  - |
-    if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then
-      brew update
-      brew install cmake
-    fi
+# before_install:
+#   - git submodule update --init --recursive
+#   - |
+#     if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then
+#       brew update
+#       brew install cmake
+#     fi
 
-install:
-  - if [ "$CC" = "gcc" ]; then export CXX="g++-5" CC="gcc-5"; fi
-  - if [ "$CC" = "clang" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+# install:
+#   - if [ "$CC" = "gcc" ]; then export CXX="g++-5" CC="gcc-5"; fi
+#   - if [ "$CC" = "clang" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
 
-before_script:
-  - mkdir build
-  - cd build
-  - cmake ..
+# before_script:
+#   - mkdir build
+#   - cd build
+#   - cmake ..
 
-script:
-  - make
-  - make spec
+# script:
+#   - make
+#   - make spec
 
-os:
-  - linux
-#  - osx
+# os:
+#   - linux
+# #  - osx
 
-addons:
-  apt:
-    sources:
-      - george-edison55-precise-backports
-      - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.7
-    packages:
-      - cmake-data
-      - cmake
-      - gcc-5
-      - g++-5
-      - clang-3.7
+# addons:
+#   apt:
+#     sources:
+#       - george-edison55-precise-backports
+#       - ubuntu-toolchain-r-test
+#       - llvm-toolchain-precise-3.7
+#     packages:
+#       - cmake-data
+#       - cmake
+#       - gcc-5
+#       - g++-5
+#       - clang-3.7

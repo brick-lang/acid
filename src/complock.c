@@ -1,8 +1,8 @@
-#include <stdlib.h>
+#include "complock.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "c11threads.h"
 #include "priority.h"
-#include "complock.h"
 
 complock_t* complock_create(priority_t priority, int id) {
   complock_t* complock = (complock_t*)malloc(sizeof(complock_t));
@@ -14,6 +14,19 @@ complock_t* complock_create(priority_t priority, int id) {
   mtx_init(&complock->mtx, mtx_plain | mtx_recursive);
 
   return complock;
+}
+
+int complock_compare(complock_t* c1, complock_t* c2) {
+  if (c1->priority < c2->priority)
+    return -1;
+  else if (c1->priority > c2->priority)
+    return 1;
+  else if (c1->id < c2->id)
+    return -1;
+  else if (c1->id > c2->id)
+    return 1;
+  else
+    return 0;
 }
 
 // TODO: Improve this. Seriously.

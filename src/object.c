@@ -218,10 +218,14 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   }
   locker_end();
 
-  // assert Here.here("phantomize=" + phantomize + "/" + phantomized + " => " + this + "/" + phantoms.size());
+  sprintf(objstr, "phantomize=%s/%s => #<Object:%p id:%d>/%zu",
+          (phantomize ? "true" : "false"),
+          (obj->phantomized ? "true" : "false"),
+          (void*)obj, obj->id, list_size(phantoms));
+  HERE_MSG(objstr);
 
   if (phantomize) {
-    //HERE_MSG(list_size(phantoms))
+    sprintf(objstr, "%zu", list_size(phantoms));
 
     // Between here and the following syncs
     // the actual contents of the links could
@@ -230,7 +234,10 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
     // or cleared.
     LIST_FOREACH(en, phantoms, {
       link_t *lk = ((TableEntry *) en)->value;
-      // HERE_MSG("ph=" + lk.target)
+
+      HERE_MSG("ph=");
+      HERE_MSG(object_to_string(lk->target));
+
       locker_start2(obj, lk->target);
       assert(obj->phantomized);
       assert(cptr != NULL);
@@ -238,9 +245,11 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
         assert(lk->src->phantomized);
         assert(lk->src->collector != NULL);
         link_phantomize(lk);
-        //HERE_MSG("phantom: " + lk->target)
+        HERE_MSG("phantom: ");
+        HERE_MSG(object_to_string(lk->target));
       }
-      //HERE_MSG("locks remaining=" + Locker.current_locks.get().locks.size())
+
+      //sprintf(objstr,"locks remaining=%d", Locker.current_locks.locks.size());
       locker_end();
     })
 
@@ -349,6 +358,7 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
   }
   locker_end();
 }
+
 void object_clean_node(Object *obj, struct collector_t *c) {
   bool die = false;
   locker_start1(obj);

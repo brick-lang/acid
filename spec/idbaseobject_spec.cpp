@@ -6,7 +6,7 @@ describe object_spec("An IdBaseObject", $ {
   IdBaseObject *o = idbaseobject_create();
   context("must have a unique id", _ {
     it("starting at 1", _ {
-      expect(o->id).to_equal(1);
+      expect(o->id).to_equal((unsigned)1);
     });
 
     it("incremented every creation", _ {

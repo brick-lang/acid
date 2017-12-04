@@ -199,9 +199,9 @@ bool collector_equals(collector_t *c1, collector_t *c2) {
     if (c1 == c2) {
       retval = true;
       break;
-    } else if (c1->forward != NULL){
+    } else if (c1 != NULL && c1->forward != NULL) {
       c1 = c1->forward;
-    } else if (c2->forward != NULL) {
+    } else if (c2 != NULL && c2->forward != NULL) {
       c2 = c2->forward;
     } else {
       retval = (c1 == c2);
@@ -219,6 +219,7 @@ collector_t *collector_update(collector_t *collector){
     locker_start1(c);
     if (c->forward == NULL) {
       retval = c;
+      locker_end();
       break;
     } else {
       c = c->forward;

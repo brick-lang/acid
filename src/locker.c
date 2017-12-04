@@ -62,14 +62,18 @@ void locker_start(int locks_count, void *locks[]) {
   treeset_new(complock_compare, &new_locks);
   list_add_last(lk->stack, new_locks);
 
-  TREESET_FOREACH(lock, tlocks, {
+  //TREESET_FOREACH(lock, tlocks, {
+  TreeSetIter treeSetIter;
+  treeset_iter_init(&treeSetIter, tlocks);
+  complock_t *lock;
+  while (treeset_iter_next(&treeSetIter, (void **) &lock) != CC_ITER_END) {
     if (treetable_contains_key(lk->locks, lock)) {
       size_t count;
       treetable_get(lk->locks, lock, (void **) &count);
       treetable_add(lk->locks, lock, (void *) (count + 1));
       treeset_add(new_locks, lock);
     } else if (!treetable_contains_key(lk->locks, lock)
-        && ((complock_t *) lock)->priority < max_priority) {
+        && lock->priority < max_priority) {
       treetable_add(lk->locks, lock, (void *) 1);
       complock_lock(lock);
       treeset_add(new_locks, lock);
@@ -77,11 +81,12 @@ void locker_start(int locks_count, void *locks[]) {
       int num = 0;
       TREETABLE_FOREACH(ll, lk->locks, fprintf(stderr, "NUM=%d\n", num++););
       char *str = calloc(sizeof(char), 500);
-      sprintf(str, "Error! Possible deadlock %s\n",complock_to_string(lock)); // + " " + lk->locks
+      sprintf(str, "Error! Possible deadlock %s\n", complock_to_string(lock)); // + " " + lk->locks
       HERE_MSG(str);
       quick_exit(-1);
     }
-  });
+  }
+  //});
   treeset_destroy(tlocks);
 }
 

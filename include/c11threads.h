@@ -8,22 +8,33 @@
   Main project site: https://github.com/jtsiomb/c11threads
 */
 
-/* TODO: port to MacOSX: no timed mutexes under macosx...
- * just delete that bit if you don't care about timed mutexes
- */
-
 #ifndef C11THREADS_H_
 #define C11THREADS_H_
 
-#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#define __USE_POSIX199309
+#define __USE_XOPEN2K
+#define __USE_XOPEN2K8
 
+#include <time.h>
 #include <errno.h>
 #include <pthread.h>
 #include <sched.h> /* for sched_yield */
 #include <sys/time.h>
-#include <time.h>
 
 #define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+
+#ifdef __APPLE__
+/* Darwin doesn't implement timed mutexes currently */
+#define C11THREADS_NO_TIMED_MUTEX
+#endif
+
+#ifdef C11THREADS_NO_TIMED_MUTEX
+#define PTHREAD_MUTEX_TIMED_NP PTHREAD_MUTEX_NORMAL
+#define C11THREADS_TIMEDLOCK_POLL_INTERVAL 5000000	/* 5 ms */
+#endif
+
+#define thread_local _Thread_local
 
 /* types */
 typedef pthread_t thrd_t;
@@ -46,12 +57,11 @@ enum { thrd_success, thrd_timedout, thrd_busy, thrd_error, thrd_nomem };
 /* ---- thread management ---- */
 
 static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
-  /* XXX there's a third possible value returned according to the standard:
-   * thrd_nomem. but it doesn't seem to correspond to any pthread_create errors.
-   */
-  return pthread_create(thr, 0, (void *(*)(void *))func, arg) == 0
-             ? thrd_success
-             : thrd_error;
+  int res = pthread_create(thr, 0, (void *(*)(void *)) func, arg);
+  if (res == 0) {
+    return thrd_success;
+  }
+  return res == ENOMEM ? thrd_nomem : thrd_error;
 }
 
 static inline void thrd_exit(int res) { pthread_exit((void *)(long)res); }
@@ -63,7 +73,7 @@ static inline int thrd_join(thrd_t thr, int *res) {
     return thrd_error;
   }
   if (res) {
-    *res = (long)retval;
+    *res = (long) retval;
   }
   return thrd_success;
 }
@@ -76,8 +86,7 @@ static inline thrd_t thrd_current(void) { return pthread_self(); }
 
 static inline int thrd_equal(thrd_t a, thrd_t b) { return pthread_equal(a, b); }
 
-static inline void thrd_sleep(const struct timespec *ts_in,
-                              struct timespec *rem_out) {
+static inline void thrd_sleep(const struct timespec *ts_in, struct timespec *rem_out) {
   int res;
   struct timespec rem, ts = *ts_in;
 
@@ -133,10 +142,29 @@ static inline int mtx_trylock(mtx_t *mtx) {
 
 static inline int mtx_timedlock(mtx_t *mtx, const struct timespec *ts) {
   int res;
+#ifdef C11THREADS_NO_TIMED_MUTEX
+  /* fake a timedlock by polling trylock in a loop and waiting for a bit */
+    struct timeval now;
+    struct timespec sleeptime;
 
+    sleeptime.tv_sec = 0;
+    sleeptime.tv_nsec = C11THREADS_TIMEDLOCK_POLL_INTERVAL;
+
+    while((res = pthread_mutex_trylock(mtx)) == EBUSY) {
+        gettimeofday(&now, NULL);
+
+        if(now.tv_sec > ts->tv_sec || (now.tv_sec == ts->tv_sec &&
+                    (now.tv_usec * 1000) >= ts->tv_nsec)) {
+            return thrd_timedout;
+        }
+
+        nanosleep(&sleeptime, NULL);
+    }
+#else
   if ((res = pthread_mutex_timedlock(mtx, ts)) == ETIMEDOUT) {
     return thrd_timedout;
   }
+#endif
   return res == 0 ? thrd_success : thrd_error;
 }
 
@@ -164,8 +192,7 @@ static inline int cnd_wait(cnd_t *cond, mtx_t *mtx) {
   return pthread_cond_wait(cond, mtx) == 0 ? thrd_success : thrd_error;
 }
 
-static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx,
-                                const struct timespec *ts) {
+static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const struct timespec *ts) {
   int res;
 
   if ((res = pthread_cond_timedwait(cond, mtx, ts)) != 0) {
@@ -194,7 +221,7 @@ static inline void call_once(once_flag *flag, void (*func)(void)) {
   pthread_once(flag, func);
 }
 
-#if __STDC_VERSION__ < 201112L
+#if __STDC_VERSION__ < 201112L || defined(C11THREADS_NO_TIMED_MUTEX)
 /* TODO take base into account */
 static inline int timespec_get(struct timespec *ts, int base) {
   struct timeval tv;

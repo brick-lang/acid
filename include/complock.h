@@ -9,16 +9,19 @@ extern "C" {
 #endif
 
 typedef struct complock_t {
-  int id;
+  const unsigned int id;
   priority_t priority;
   mtx_t mtx;
 } complock_t;
 
-complock_t* complock_create(priority_t priority, int id);
-int complock_compare(complock_t* c1, complock_t* c2);
+complock_t* complock_create(priority_t priority, unsigned int id);
+void complock_destroy(complock_t* c);
+int complock_compare(const void* c1, const void* c2);
 int complock_hash_code(complock_t* c);
 int complock_equals(complock_t* c1, complock_t* c2);
 char* complock_to_string(complock_t* c);
+int complock_lock(complock_t* c);
+int complock_unlock(complock_t* c);
 
 #ifdef __cplusplus
 }

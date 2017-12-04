@@ -16,6 +16,11 @@ bit_t bit_flip(bit_t b) {
   }
 }
 
+/**
+ * Converts an integer to a bit_t
+ * @param n the integer to convert
+ * @return the resulting bit_t
+ */
 bit_t bit_value_of(int n) {
   switch (n) {
     case 0:

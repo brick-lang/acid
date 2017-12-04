@@ -1,13 +1,12 @@
-#include "complock.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "c11threads.h"
-#include "priority.h"
+#include "idbaseobject.h"
+#include "complock.h"
 
-complock_t* complock_create(priority_t priority, int id) {
+complock_t* complock_create(priority_t priority, unsigned int id) {
   complock_t* complock = (complock_t*)malloc(sizeof(complock_t));
+  *(unsigned int*)&complock->id = id;
   complock->priority = priority;
-  complock->id = id;
 
   // FIXME: check this return value to make sure everything's alright
   // (thrd_success vs thrd_error, etc.)
@@ -16,14 +15,18 @@ complock_t* complock_create(priority_t priority, int id) {
   return complock;
 }
 
-int complock_compare(complock_t* c1, complock_t* c2) {
-  if (c1->priority < c2->priority)
+inline void complock_destroy(complock_t *c) { free(c); }
+
+int complock_compare(const void* c1, const void* c2) {
+  complock_t* lock1 = (complock_t*)c1;
+  complock_t* lock2 = (complock_t*)c2;
+  if (lock1->priority < lock2->priority)
     return -1;
-  else if (c1->priority > c2->priority)
+  else if (lock1->priority > lock2->priority)
     return 1;
-  else if (c1->id < c2->id)
+  else if (lock1->id < lock2->id)
     return -1;
-  else if (c1->id > c2->id)
+  else if (lock1->id > lock2->id)
     return 1;
   else
     return 0;
@@ -37,8 +40,16 @@ int complock_equals(complock_t* c1, complock_t* c2) {
 }
 
 char* complock_to_string(complock_t* c) {
-  int max_len = 20;  // being generous
+  size_t max_len = 30;  // being generous
   char* str = (char*)calloc(max_len, sizeof(char));
-  sprintf(str, "Lock[%d, %d]", c->priority, c->id);
+  sprintf(str, "CompLock[prio=%d, id=%d]", c->priority, c->id);
   return str;
+}
+
+int complock_lock(complock_t* c) {
+  return mtx_lock(&c->mtx);
+}
+
+int complock_unlock(complock_t* c) {
+  return mtx_unlock(&c->mtx);
 }

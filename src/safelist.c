@@ -64,7 +64,7 @@ void *safelist_poll(safelist_t *sl) {
 void safelist_forward(safelist_t *sl, safelist_t *forward_to) {
   locker_start2(sl->lock, forward_to->lock);
   while (true) {
-    void *obj = safelist_poll(sl);
+    Object *obj = safelist_poll(sl);
     if (obj == NULL) break;
     safelist_add(forward_to, obj);
   }

@@ -9,7 +9,8 @@ extern "C" {
 #endif
 
 typedef struct xthread_t {
-  int (*run)();
+  bool (*run)(void*);
+  void *runarg;
 } xthread_t;
 
 xthread_t *xthread_create();

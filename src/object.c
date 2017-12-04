@@ -51,7 +51,6 @@ Object *object_create() {
   obj->count[2] = 0;
   obj->collector = NULL;
   obj->mark = false;
-  obj->recovered = false;
   obj->phantomization_complete = true;
 
   locker_start1(objects_lockable);
@@ -84,7 +83,8 @@ void object_dec(Object *obj, bit_t w) {
         HERE();
         collector_add_object(obj->collector, obj);
         obj->collector->th = xthread_create();
-        obj->collector->th->run = alloc_callback(collector_run, obj->collector);
+        obj->collector->th->run = (bool (*)(void *)) collector_run;
+        obj->collector->th->runarg = obj->collector;
         HERE();
         xthread_start(obj->collector->th);
         HERE_MSG("collector created");
@@ -180,12 +180,10 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
         locker_end();
         break;
       }
-      if (c->forward == NULL && t->forward == NULL) {
-        locker_end();
-        assert(false);
-      }
+      assert(c->forward != NULL || t->forward != NULL);
       if (c->forward != NULL) c = c->forward;
       if (t->forward != NULL) t = t->forward;
+      locker_end();
     }
   }
 
@@ -205,7 +203,7 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
       obj->phantomized = true;
       assert(obj->collector != NULL);
       obj->phantomization_complete = false;
-      HASHTABLE_FOREACH(entry, obj->links, { list_add(phantoms, entry); });
+      HASHTABLE_FOREACH(entry, obj->links, { list_add_first(phantoms, entry); });
     }
   } else { // phantom count is > 0, but weak and strong are zero.
     if (!obj->phantomized) {
@@ -218,6 +216,7 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   }
   locker_end();
 
+  HERE_MSG(object_to_string(obj));
   sprintf(objstr, "phantomize=%s/%s => #<Object:%p id:%d>/%zu",
           (phantomize ? "true" : "false"),
           (obj->phantomized ? "true" : "false"),
@@ -226,32 +225,35 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
 
   if (phantomize) {
     sprintf(objstr, "%zu", list_size(phantoms));
+    HERE_MSG(objstr);
 
     // Between here and the following syncs
     // the actual contents of the links could
     // be changed. New links could be added
     // and existing links could be redirected
     // or cleared.
-    LIST_FOREACH(en, phantoms, {
-      link_t *lk = ((TableEntry *) en)->value;
+    ListIter li;
+    list_iter_init(&li, phantoms);
+    TableEntry *en = NULL;
+    while (list_iter_next(&li, (void **) &en) != CC_ITER_END) {
+      //LIST_FOREACH(en, phantoms, {
+      link_t *lk = en->value;
 
-      HERE_MSG("ph=");
-      HERE_MSG(object_to_string(lk->target));
+      HERE_PREFIX_MSG("ph=", object_to_string(lk->target));
 
       locker_start2(obj, lk->target);
       assert(obj->phantomized);
-      assert(cptr != NULL);
       if (!lk->phantomized) {
         assert(lk->src->phantomized);
         assert(lk->src->collector != NULL);
         link_phantomize(lk);
-        HERE_MSG("phantom: ");
-        HERE_MSG(object_to_string(lk->target));
+        HERE_PREFIX_MSG("phantom: ", object_to_string(lk->target));
       }
 
-      //sprintf(objstr,"locks remaining=%d", Locker.current_locks.locks.size());
+      //HERE_PREFIX_MSG("locks remaining=", Locker.current_locks.locks.size());
       locker_end();
-    })
+      //})
+    }
 
     locker_start1(obj);
     obj->phantomization_complete = true;
@@ -277,7 +279,6 @@ void object_rebuild_link(safelist_t *rebuildNext, link_t *const lk) {
 
     if (lk->target->count[2] == 0) {
       object_set_collector(lk->target, NULL);
-      lk->target->recovered = false;
     }
     lk->phantomized = false;
 
@@ -317,8 +318,9 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
 
   locker_start1(obj);
   assert(!obj->deleted);
-  if (obj->collector != NULL) object_set_collector(obj, collector_update(obj->collector));
-  //HERE_MSG("rebuild:" + obj);
+  if (obj->collector != NULL)
+    object_set_collector(obj, collector_update(obj->collector));
+  HERE_PREFIX_MSG("rebuild:", object_to_string(obj));
   if (obj->count[obj->which] > 0) {
     int wcount = 0;
     while (obj->phantomized && !obj->phantomization_complete) {
@@ -332,7 +334,7 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
     obj->phantomized = false;
     list_new(&rebuild);
     HASHTABLE_FOREACH(entry, obj->links, { list_add(rebuild, entry); });
-    //HERE_MSG("rebuild " + this);
+    HERE_PREFIX_MSG("post-rebuild:", object_to_string(obj));
   } else if (obj->count[bit_flip(obj->which)] > 0) {
     assert(false);
   }
@@ -353,8 +355,6 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
   locker_start1(obj);
   if (obj->count[2] == 0) {
     assert(obj->collector == NULL);
-  } else {
-    obj->recovered = true;
   }
   locker_end();
 }
@@ -362,7 +362,7 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
 void object_clean_node(Object *obj, struct collector_t *c) {
   bool die = false;
   locker_start1(obj);
-  //HERE_MSG("on clean-up " + object_to_string(obj));
+  HERE_PREFIX_MSG("on clean-up ", object_to_string(obj));
   assert(obj->count[0] >= 0);
   assert(obj->count[1] >= 0);
   if (obj->count[0] == 0 && obj->count[1] == 0) {
@@ -388,9 +388,11 @@ bool object_merge_collectors(Object *const obj, Object *target) {
   collector_t *t = target->collector;
   if (t == NULL && s != NULL) {
     object_set_collector(target, s);
-  } else if (t != NULL && s == NULL) {
+  }
+  if (t != NULL && s == NULL) {
     object_set_collector(obj, t);
-  } else if (t == s || t == NULL || s == NULL) {
+  }
+  if (t == s || t == NULL || s == NULL) {
     return false;
   }
 
@@ -532,10 +534,13 @@ void object_status() {
     }
 
     if (!obj->deleted) live++;
-    // assert Here.here(obj);
+    HERE_MSG(object_to_string(obj));
     locker_end();
   });
-  // assert(Here.here("live=" + live);
+
+  sprintf(objstr, "live=%d", live);
+  HERE_MSG(objstr);
+
   objectlive = live;
 }
 

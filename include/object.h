@@ -20,7 +20,6 @@ typedef struct Object {
   volatile int count[3];
   struct collector_t *collector;
   volatile bool mark;
-  volatile bool recovered;
   bool phantomization_complete;
 } Object;
 
@@ -38,7 +37,6 @@ void object_inc_strong(Object *obj);
 void object_dec(Object *obj, bit_t w);
 void object_dec_phantom(Object *obj);
 void object_dec_strong(Object *obj);
-void object_del(Object *obj);
 void object_die(Object *obj);
 void object_clean_node(Object *obj, struct collector_t *c);
 bool object_merge_collectors(Object *obj, Object *target);

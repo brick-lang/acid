@@ -44,7 +44,7 @@ void link_destroy(link_t *link) {
 
 // Pseudo: PhantomizeLink
 void link_phantomize(link_t *link) {
-  locker_start2((void *) link->target, (void *) link->src);
+  locker_start2(link->target, link->src);
   if (link->target == NULL || link->phantomized) {
     locker_end();
     // assert Here.here("locks remaining=" + Locker.currentLocks.get().locks.size());
@@ -55,7 +55,7 @@ void link_phantomize(link_t *link) {
   // assert link->target->collector != NULL || link->src->collector != NULL
   object_merge_collectors(link->src, link->target);
   link->phantomized = true;
-  // assert target.collector.equals(src.collector) : "diff1: t="+target.collector+" s="+src.collector;
+  assert(collector_equals(link->target->collector, link->src->collector)); // : "diff1: t="+target.collector+" s="+src.collector;
   locker_end();
   // assert Here.here("locks remaining=" + Locker.currentLocks.get().locks.size());
 }

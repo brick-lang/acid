@@ -62,7 +62,6 @@ void locker_start(int locks_count, void *locks[]) {
   treeset_new(complock_compare, &new_locks);
   list_add_last(lk->stack, new_locks);
 
-  //TREESET_FOREACH(lock, tlocks, {
   TreeSetIter treeSetIter;
   treeset_iter_init(&treeSetIter, tlocks);
   complock_t *lock;
@@ -86,7 +85,6 @@ void locker_start(int locks_count, void *locks[]) {
       quick_exit(-1);
     }
   }
-  //});
   treeset_destroy(tlocks);
 }
 
@@ -118,8 +116,12 @@ void locker_end() {
   locker_t *lk = current_locks;
   TreeSet *locks = NULL;
   list_remove_last(lk->stack, (void **) &locks); // pop off the stack;
-  TREESET_FOREACH(lock, locks, {
-    size_t count;
+
+  TreeSetIter tsi;
+  treeset_iter_init(&tsi, locks);
+  complock_t *lock = NULL;
+  while (treeset_iter_next(&tsi, (void **) &lock) != CC_ITER_END) {
+    size_t count = 0;
     treetable_get(lk->locks, lock, (void **) &count);
     if (count == 1) {
       treetable_remove(lk->locks, lock, NULL);
@@ -127,6 +129,6 @@ void locker_end() {
     } else {
       treetable_add(lk->locks, lock, (void *) (count - 1));
     }
-  });
+  }
   treeset_destroy(locks);
 }

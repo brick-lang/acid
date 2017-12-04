@@ -15,7 +15,6 @@ extern "C" {
 typedef struct collector_t {
   const unsigned int id; // placeholder as lockable inherits Object
   complock_t *const lock;
-  const cnd_t cond;
   volatile bool terminated;
   xthread_t *th;
   struct collector_t* forward;

@@ -1,10 +1,11 @@
 #include <assert.h>
 #include <object.h>
-#include <callback.h>
 #include "collector.h"
 #include "locker.h"
 #include "idbaseobject.h"
 #include "here.h"
+
+char collstr[200];
 
 collector_t *collector_create() {
   collector_t *collector = (collector_t *) malloc(sizeof(collector_t));
@@ -20,7 +21,6 @@ collector_t *collector_create() {
 
   HERE();
   *(complock_t **) &collector->lock = complock_create(PRIORITY_COLLECTOR, collector->id);
-  cnd_init((cnd_t *) &collector->cond);
   HERE();
 
   return collector;
@@ -36,7 +36,6 @@ void collector_destroy(collector_t *collector) {
 
   HERE();
   complock_destroy(collector->lock);
-  cnd_destroy((cnd_t*)&collector->cond);
   HERE();
 
   free(collector);
@@ -61,16 +60,23 @@ void collector_set_forward(collector_t *collector, collector_t *f) {
     return;
   }
 
-  if (f!=NULL) counter_inc_ref(f->count);
-  if (collector->forward!=NULL) counter_dec_ref(collector->forward->count);
-  if (f!=NULL) assert(collector->forward==NULL); // TODO: Make sure this is *actually* needed
+  if (f!=NULL)
+    counter_inc_ref(f->count);
+  if (collector->forward!=NULL)
+    counter_dec_ref(collector->forward->count);
+  if (f!=NULL)
+    assert(collector->forward==NULL); // TODO: Make sure this is *actually* needed
 
   collector->forward = f;
   locker_end();
 }
 
 char *collector_to_string(collector_t *collector) {
-  return "";
+  sprintf(collstr, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
+          (void*)collector, collector->id, safelist_size(collector->collect),
+          safelist_size(collector->merged_list),
+          (collector->forward == NULL ? -1 : (int)collector->forward->id));
+  return (char*)collstr;
 }
 
 void collector_add_object(collector_t *collector, Object *obj) {
@@ -105,7 +111,8 @@ void collector_request_delete(Object *const obj) {
   // obj->where = new Throwable;
   // assert so.where == null;
   xthread_t *xthrd = (xthread_t*)malloc(sizeof(xthread_t));
-  xthrd->run = alloc_callback(&__collector_request_delete_xthread_run, obj);
+  xthrd->run = (bool (*)(void *)) __collector_request_delete_xthread_run;
+  xthrd->runarg = obj;
   xthread_start(xthrd);
 }
 
@@ -150,19 +157,26 @@ bool collector_run(collector_t* collector) {
     object_clean_node(obj, collector);
   }
 
-  // assert Here.here("done one cycle "+count+ " m="+mergedList.size()+ ",rc="+recoveryList.size()+ ",cl="+cleanList.size()+ ",co="+collect.size()+ ",r="+rebuildList.size());
+  sprintf(collstr, "Done one cycle %s m=%zu,rc=%zu,cl=%zu,co=%zu,r=%zu",
+          counter_to_string(collector->count),
+          safelist_size(collector->merged_list),
+          safelist_size(collector->recovery_list),
+          safelist_size(collector->clean_list),
+          safelist_size(collector->collect),
+          safelist_size(collector->rebuild_list));
 
   locker_start2(collector, collector->forward);
   bool done = counter_done(collector->count);
   if (done) {
     collector_terminate(collector);
     locker_end();
+    HERE_PREFIX_MSG("Terminated ", collector_to_string(collector));
     return false;
   }
   locker_end();
 
   // catch exception, log handling, stack trace, etc. in orig file here.
-  // assert Here.here("Terminated" + this);
+  HERE_PREFIX_MSG("Terminated ", collector_to_string(collector));
   return true;
 }
 
@@ -184,8 +198,8 @@ void collector_forward_safelists_to(collector_t *collector, collector_t *s) {
 
 void collector_merge(collector_t *collector, collector_t *s) {
   locker_start2(collector, s);
-  // assert Here.here("S=" + s);
-  // assert Here.here("T=" + collector);
+  HERE_PREFIX_MSG("S=", collector_to_string(s));
+  HERE_PREFIX_MSG("T=", collector_to_string(collector));
   collector_forward_safelists_to(s, collector);
   collector_set_forward(s,collector);
   locker_end();
@@ -198,17 +212,18 @@ bool collector_equals(collector_t *c1, collector_t *c2) {
     locker_start2(c1, c2);
     if (c1 == c2) {
       retval = true;
+      locker_end();
       break;
     } else if (c1 != NULL && c1->forward != NULL) {
       c1 = c1->forward;
     } else if (c2 != NULL && c2->forward != NULL) {
       c2 = c2->forward;
     } else {
-      retval = (c1 == c2);
+      retval = false;
+      locker_end();
       break;
     }
   }
-  locker_end();
   return retval;
 }
 

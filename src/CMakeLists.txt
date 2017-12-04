@@ -8,7 +8,7 @@ add_library( brandtgc
   link.c
   object.c collector.c safelist.c xthread.c root.c worker.c)
 
-target_link_libraries(brandtgc collectc ${CALLBACK_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(brandtgc collectc ${CMAKE_THREAD_LIBS_INIT})
 if(UNIX)
     target_link_libraries(brandtgc m)
 endif(UNIX)

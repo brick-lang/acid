@@ -1,8 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <here.h>
 #include "counter.h"
 #include "locker.h"
+
+static char countstr[20];
 
 counter_t* counter_create() {
   counter_t* counter = (counter_t*)malloc(sizeof(counter_t));
@@ -45,14 +48,13 @@ void counter_inc_store(counter_t *counter) {
 void counter_dec_store(counter_t *counter) {
   locker_start1(counter->lock_counter);
   counter->store_count--;
-  // assert (store_count >= 0) : this
+  assert (counter->store_count >= 0); // : this
   locker_end();
 }
 
 char *counter_to_string(counter_t *counter) {
-  char* str = (char*)calloc(40, sizeof(char));
-  sprintf(str, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
-  return str;
+  sprintf(countstr, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
+  return countstr;
 }
 
 bool counter_action(counter_t *counter) {
@@ -61,7 +63,7 @@ bool counter_action(counter_t *counter) {
   while (true) {
     if (counter->store_count > 0) { retval = true; break; }
     if (counter->ref_count == 0) { retval = false; break; }
-    // assert Here.here(this);
+    HERE_MSG(counter_to_string(counter));
     cnd_wait(&counter->lock_counter->cond, &counter->lock_counter->cmplock->mtx);
     // TODO: check thrd_error here
   }

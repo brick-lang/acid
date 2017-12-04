@@ -1,7 +1,7 @@
 #include <c11threads.h>
 #include "../lib/collectc/include/list.h"
 #include "worker.h"
-#define NUM_WORKERS 8
+#define NUM_WORKERS 1
 
 static thrd_t *WORKERS[NUM_WORKERS];
 static mtx_t worker_synchro_mutex;
@@ -32,7 +32,7 @@ int worker_run(void*_) {
   while(true) {
     xthread_t *xthread = worker_get();
     if (xthread != NULL) {
-      xthread->run();
+      xthread->run(xthread->runarg);
     }
   }
 }

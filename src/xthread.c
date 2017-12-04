@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <callback.h>
 #include "locker.h"
 #include "wrappedlock.h"
 #include "xthread.h"
@@ -14,11 +13,12 @@ xthread_t *xthread_create(){
   }
   xthread_t *xthread = malloc(sizeof(xthread_t));
   xthread->run = NULL;
+  xthread->runarg = NULL;
   return xthread;
 }
 
 int xthread_xrun(xthread_t *xthrd) {
-  return xthrd->run();
+  return xthrd->run(xthrd->runarg);
 }
 
 void xthread_start(xthread_t* xthrd) {
@@ -64,8 +64,5 @@ void xthread_run(xthread_t *xthrd) {
 }
 
 void xthread_destroy(xthread_t *xthrd) {
-  if (xthrd->run != NULL) {
-    free_callback(xthrd->run);
-  }
   free(xthrd);
 }

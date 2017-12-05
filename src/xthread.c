@@ -17,10 +17,6 @@ xthread_t *xthread_create(){
   return xthread;
 }
 
-bool xthread_xrun(xthread_t *xthrd) {
-  return xthrd->run(xthrd->runarg);
-}
-
 void xthread_start(xthread_t* xthrd) {
   locker_start1(lock);
   count++;
@@ -48,13 +44,13 @@ bool xthread_wait_for_zero_threads() {
 }
 
 void xthread_run(xthread_t *xthrd) {
-  bool again = false;
-  again = xthread_xrun(xthrd);
+  bool again = xthrd->run(xthrd->runarg);
   // TODO: Error handle here (stack trace, etc.)
   if (again) {
     worker_add(xthrd);
   } else {
     locker_start1(lock);
+    xthread_destroy(xthrd);
     count--;
     if(count == 0) {
       cnd_broadcast(&lock->cond);

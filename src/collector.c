@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <object.h>
+#include <lockable.h>
 #include "collector.h"
 #include "locker.h"
 #include "idbaseobject.h"
@@ -33,15 +34,11 @@ void collector_destroy(collector_t *collector) {
   safelist_destroy(collector->recovery_list);
   safelist_destroy(collector->rebuild_list);
   safelist_destroy(collector->clean_list);
-
-  HERE();
   complock_destroy(collector->lock);
-  HERE();
-
   free(collector);
 }
 
-void collector_check_terminated(collector_t *collector) {
+void collector_check_not_terminated(collector_t *collector) {
   locker_start1(collector);
   assert(!collector->terminated);
   locker_end();
@@ -106,12 +103,10 @@ void collector_add_object(collector_t *collector, Object *obj) {
 
 bool __collector_request_delete_xthread_run(Object *obj) {
   object_die(obj);
-  return false;
+  return false; // Don't run this operation again.
 }
 
 void collector_request_delete(Object *const obj) {
-  // obj->where = new Throwable;
-  // assert so.where == null;
   xthread_t *xthrd = (xthread_t*)malloc(sizeof(xthread_t));
   xthrd->run = (bool (*)(void *)) __collector_request_delete_xthread_run;
   xthrd->runarg = obj;
@@ -172,8 +167,9 @@ bool collector_run(collector_t* collector) {
   bool done = counter_done(collector->count);
   if (done) {
     collector_terminate(collector);
-    locker_end();
+    locker_end(); // release the collector->lock *before* destruction
     HERE_PREFIX_MSG("Terminated ", collector_to_string(collector));
+    collector_destroy(collector);
     return false;
   }
   locker_end();

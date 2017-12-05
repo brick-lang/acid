@@ -14,7 +14,6 @@ typedef struct xthread_t {
 } xthread_t;
 
 xthread_t *xthread_create();
-bool xthread_xrun(xthread_t *xthread);
 void xthread_start(xthread_t *xthread);
 int xthread_get_thread_count();
 bool xthread_wait_for_zero_threads();

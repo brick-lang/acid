@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 void workers_setup();
+void workers_teardown();
 int worker_run(void*);
 xthread_t* worker_get();
 void worker_add(xthread_t *xthrd);

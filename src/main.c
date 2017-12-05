@@ -16,6 +16,10 @@ void world_init() {
   workers_setup();
 }
 
+void world_teardown() {
+  workers_teardown();
+}
+
 void simplecycle() {
   root_t a = {0}, b = {0};
   root_alloc(&a);
@@ -118,6 +122,7 @@ void mark_and_sweep(){
       }
     }
   }
+  deque_destroy(pqueue);
 
   HashSet *copy;
   hashset_new(&copy);
@@ -140,6 +145,7 @@ void mark_and_sweep(){
       assert(o->deleted);
     }
   })
+  hashset_destroy(copy);
 
   sprintf(debugmsg, "After Mark and Sweep, live = %d", live);
   HERE_MSG(debugmsg);
@@ -162,5 +168,7 @@ int main(int argc, char** argv) {
   world_init();
   printf("hello world!\n");
   simplecycle();
+//  simplecycle2();
   status();
+  world_teardown();
 }

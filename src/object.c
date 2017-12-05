@@ -81,11 +81,11 @@ void object_dec(Object *obj, bit_t w) {
         object_set_collector(obj, collector_create());
         HERE();
         collector_add_object(obj->collector, obj);
-        obj->collector->th = xthread_create();
-        obj->collector->th->run = (bool (*)(void *)) collector_run;
-        obj->collector->th->runarg = obj->collector;
+        xthread_t *xthrd = xthread_create();
+        xthrd->run = (bool (*)(void *)) collector_run;
+        xthrd->runarg = obj->collector;
         HERE();
-        xthread_start(obj->collector->th);
+        xthread_start(xthrd);
         HERE_MSG("collector created");
       } else {
         HERE_MSG(object_to_string(obj));
@@ -199,12 +199,16 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
 
   locker_start1(obj);
   object_set_collector(obj, collector_update(obj->collector));
+
   assert(t != NULL);
   assert(!obj->deleted);
+
   obj->count[obj->which]--;
   assert(obj->count[obj->which] >= 0); //: object_to_string(obj);
+
   if (obj->count[obj->which] > 0) {
     locker_end();
+    list_destroy(phantoms);
     return;
   } else if (obj->count[bit_flip(obj->which)] > 0) {
     obj->which = bit_flip(obj->which);
@@ -264,6 +268,7 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
       locker_end();
       //})
     }
+    list_destroy(phantoms);
 
     locker_start1(obj);
     obj->phantomization_complete = true;
@@ -411,8 +416,8 @@ bool object_merge_collectors(Object *const obj, Object *target) {
 
   while (true) {
     locker_start4(t, s, obj, target);
-    collector_check_terminated(t);
-    collector_check_terminated(s);
+    collector_check_not_terminated(t);
+    collector_check_not_terminated(s);
     if (t->forward == s && s->forward == NULL) {
       object_set_collector(target, s);
       object_set_collector(obj, s);
@@ -456,6 +461,11 @@ char *object_to_string(Object *obj) {
           obj->which, cid, hashtable_size(obj->links),
           (obj->deleted ? "true" : "false"), (obj->mark ? "true" : "false"),
           (obj->phantomized ? "yes" : "no")); //obj->links->keys());
+  sprintf(objstr, "{%d#[%d,%d,%d][%d] c:%d d=%s%s p=%s l=%zu}",
+          obj->id, obj->count[0], obj->count[1], obj->count[2],
+          obj->which, cid, (obj->deleted ? "X" : "O"),
+          (obj->mark ? "X" : "O"), (obj->phantomized ? "yes" : "no"),
+          hashtable_size(obj->links));
   locker_end();
   return objstr;
 }
@@ -547,6 +557,7 @@ void object_status() {
     HERE_MSG(object_to_string(obj));
     locker_end();
   });
+  hashset_destroy(copy);
 
   sprintf(objstr, "live=%d", live);
   HERE_MSG(objstr);
@@ -572,6 +583,8 @@ int object_live() {
     if (!obj->deleted) live++;
     locker_end();
   });
+  hashset_destroy(copy);
+
   return live;
 }
 

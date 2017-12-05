@@ -16,7 +16,6 @@ typedef struct collector_t {
   const unsigned int id; // placeholder as lockable inherits Object
   complock_t *const lock;
   volatile bool terminated;
-  xthread_t *th;
   struct collector_t* forward;
 
   counter_t *const count;
@@ -28,7 +27,7 @@ typedef struct collector_t {
 } collector_t;
 
 collector_t *collector_create();
-void collector_check_terminated(collector_t* collector);
+void collector_check_not_terminated(collector_t *collector);
 void collector_set_forward(collector_t* collector, collector_t *f);
 char* collector_to_string(collector_t* collector);
 void collector_add_object(collector_t* add_to, Object *o);

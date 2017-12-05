@@ -5,7 +5,7 @@
 #include "counter.h"
 #include "locker.h"
 
-static char countstr[20];
+static char countstr[50];
 
 counter_t* counter_create() {
   counter_t* counter = (counter_t*)malloc(sizeof(counter_t));

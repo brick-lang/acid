@@ -5,7 +5,8 @@
 #include "counter.h"
 #include "locker.h"
 
-static char countstr[50];
+#define COUNTSTRLEN 50
+static char countstr[COUNTSTRLEN+1];
 
 counter_t* counter_create() {
   counter_t* counter = (counter_t*)malloc(sizeof(counter_t));
@@ -53,7 +54,7 @@ void counter_dec_store(counter_t *counter) {
 }
 
 char *counter_to_string(counter_t *counter) {
-  sprintf(countstr, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
+  snprintf(countstr, COUNTSTRLEN, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
   return countstr;
 }
 

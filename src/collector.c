@@ -7,7 +7,7 @@
 #include "here.h"
 
 #define COLLSTRLEN 200
-char collstr[COLLSTRLEN];
+char collstr[COLLSTRLEN+1];
 
 collector_t *collector_create() {
   collector_t *collector = (collector_t *) malloc(sizeof(collector_t));

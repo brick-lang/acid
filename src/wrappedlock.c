@@ -4,7 +4,7 @@
 #include "wrappedlock.h"
 
 wrappedlock_t* wrappedlock_create(priority_t p) {
-  wrappedlock_t* wrappedlock = (wrappedlock_t*)malloc(sizeof(wrappedlock_t));
+  wrappedlock_t* wrappedlock = malloc(sizeof(wrappedlock_t));
   idbaseobject_init((IdBaseObject *) wrappedlock);
   wrappedlock->cmplock = complock_create(p, wrappedlock->id);
   assert(wrappedlock->cmplock != NULL);

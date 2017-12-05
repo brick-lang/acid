@@ -7,7 +7,7 @@
 
 #ifdef DEBUG
 #define LINKSTRLEN 200
-static char linkstr[LINKSTRLEN];
+static char linkstr[LINKSTRLEN+1];
 #endif
 
 link_t *link_create(Object *s) {

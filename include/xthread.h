@@ -13,6 +13,8 @@ typedef struct xthread_t {
   void *runarg;
 } xthread_t;
 
+void xthread_setup();
+void xthread_teardown();
 xthread_t *xthread_create();
 void xthread_start(xthread_t *xthread);
 int xthread_get_thread_count();

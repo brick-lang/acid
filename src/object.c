@@ -15,7 +15,7 @@ volatile int objectslive = 0;
 static lockable_t *objects_lockable = NULL;
 
 #define OBJSTRLEN 200
-static char objstr[OBJSTRLEN];
+static char objstr[OBJSTRLEN+1];
 
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
@@ -324,6 +324,7 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
       }
       if (c->forward != NULL) c = c->forward;
       if (t->forward != NULL) t = t->forward;
+      locker_end();
     }
   }
 
@@ -533,26 +534,30 @@ void object_status() {
   hashset_new(&copy);
 
   locker_start1(objects_lockable);
-  HASHSET_FOREACH(obj, objects, { hashset_add(copy, obj); });
+  if (hashset_size(objects) > 0) {
+    HASHSET_FOREACH(obj, objects, { hashset_add(copy, obj); });
+  }
   locker_end();
 
   int live = 0;
-  HASHSET_FOREACH(val, copy, {
-    Object *obj = val;
-    locker_start1(obj);
-    assert(obj->count[0] >= 0); // : object_to_string(obj);
-    assert(obj->count[1] >= 0); // : object_to_string(obj);
-    assert(obj->count[2] == 0); // : object_to_string(obj);
-    if (obj->deleted) { ; }
-    else {
-      assert(!obj->phantomized);
-      assert(obj->collector == NULL); // : obj
-    }
+  if (hashset_size(copy) > 0) {
+    HASHSET_FOREACH(val, copy, {
+      Object *obj = val;
+      locker_start1(obj);
+      assert(obj->count[0] >= 0); // : object_to_string(obj);
+      assert(obj->count[1] >= 0); // : object_to_string(obj);
+      assert(obj->count[2] == 0); // : object_to_string(obj);
+      if (obj->deleted) { ; }
+      else {
+        assert(!obj->phantomized);
+        assert(obj->collector == NULL); // : obj
+      }
 
-    if (!obj->deleted) live++;
-    HERE_MSG(object_to_string(obj));
-    locker_end();
-  });
+      if (!obj->deleted) live++;
+      HERE_MSG(object_to_string(obj));
+      locker_end();
+    });
+  }
   hashset_destroy(copy);
 
   snprintf(objstr, OBJSTRLEN, "live=%d", live);
@@ -566,19 +571,23 @@ int object_live() {
   hashset_new(&copy);
 
   locker_start1(objects_lockable);
-  HASHSET_FOREACH(obj, objects, { hashset_add(copy, obj); });
+  if (hashset_size(objects) > 0) {
+    HASHSET_FOREACH(obj, objects, { hashset_add(copy, obj); });
+  }
   locker_end();
 
   int live = 0;
-  HASHSET_FOREACH(val, copy, {
-    Object *obj = val;
-    locker_start1(obj);
-    assert(obj->count[0] >= 0); // : object_to_string(obj);
-    assert(obj->count[1] >= 0); // : object_to_string(obj);
-    assert(obj->count[2] == 0); // : object_to_string(obj);
-    if (!obj->deleted) live++;
-    locker_end();
-  });
+  if (hashset_size(copy) > 0) {
+    HASHSET_FOREACH(val, copy, {
+      Object *obj = val;
+      locker_start1(obj);
+      assert(obj->count[0] >= 0); // : object_to_string(obj);
+      assert(obj->count[1] >= 0); // : object_to_string(obj);
+      assert(obj->count[2] == 0); // : object_to_string(obj);
+      if (!obj->deleted) live++;
+      locker_end();
+    });
+  }
   hashset_destroy(copy);
 
   return live;

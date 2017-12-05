@@ -80,7 +80,7 @@ void locker_start(int locks_count, void *locks[]) {
       treeset_add(new_locks, lock);
     } else {
       int num = 0;
-      TREETABLE_FOREACH(ll, lk->locks, fprintf(stderr, "NUM=%d\n", num++););
+      TREETABLE_FOREACH(ll, lk->locks, fprintf(stderr, "NUM=%d, %s\n", num++, complock_to_string(ll.key)););
       char str[200];
       snprintf(str, 200, "Error! Possible deadlock %s\n", complock_to_string(lock)); // + " " + lk->locks
       HERE_MSG(str);

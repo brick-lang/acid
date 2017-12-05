@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <assert.h>
 #include "locker.h"
 #include "wrappedlock.h"
 #include "xthread.h"
@@ -7,10 +8,19 @@
 static wrappedlock_t *lock = NULL;
 static volatile int count = 0;
 
+void xthread_setup() {
+  assert(lock == NULL);
+  //lock = wrappedlock_create(PRIORITY_LIST);
+  lock = malloc(sizeof(wrappedlock_t));
+  lock->cmplock = complock_create(PRIORITY_LIST, 0);
+  cnd_init(&lock->cond);
+}
+
+void xthread_teardown() {
+  wrappedlock_destroy(lock);
+}
+
 xthread_t *xthread_create(){
-  if (lock == NULL) {
-    lock = wrappedlock_create(PRIORITY_LIST);
-  }
   xthread_t *xthread = malloc(sizeof(xthread_t));
   xthread->run = NULL;
   xthread->runarg = NULL;

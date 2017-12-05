@@ -10,18 +10,20 @@
 #include "../lib/collectc/include/hashset.h"
 
 #define DEBUGSTRLEN 300
-char debugstr[DEBUGSTRLEN];
+char debugstr[DEBUGSTRLEN+1];
 
 void mark_and_sweep();
 
 void world_init() {
   root_setup();
   object_system_setup();
+  xthread_setup();
   workers_setup();
 }
 
 void world_teardown() {
   workers_teardown();
+  xthread_teardown();
 }
 
 void simplecycle() {
@@ -141,6 +143,7 @@ void wheel() {
     root_set(wheel, o);
     locker_end();
   }
+  root_free(wheel);
 }
 
 
@@ -186,20 +189,22 @@ void mark_and_sweep(){
   }
   int live = 0;
   objectslive = object_live();
-  HASHSET_FOREACH(so, copy, {
-    Object *o = so;
-    if (o->mark) {
-      assert(o->count[o->which] > 0);
-      assert(o->count[bit_flip(o->which)] >= 0);
-      assert(o->count[2] == 0); // No ghosts allowed!
-      assert(!o->deleted);
-      assert(o->collector == NULL);
-      live++;
-      o->mark = false;
-    } else {
-      assert(o->deleted);
-    }
-  })
+  if (hashset_size(copy) > 0) {
+    HASHSET_FOREACH(so, copy, {
+      Object *o = so;
+      if (o->mark) {
+        assert(o->count[o->which] > 0);
+        assert(o->count[bit_flip(o->which)] >= 0);
+        assert(o->count[2] == 0); // No ghosts allowed!
+        assert(!o->deleted);
+        assert(o->collector == NULL);
+        live++;
+        o->mark = false;
+      } else {
+        assert(o->deleted);
+      }
+    })
+  }
   hashset_destroy(copy);
 
   snprintf(debugstr, DEBUGSTRLEN, "After Mark and Sweep, live = %d", live);
@@ -222,8 +227,8 @@ void status() {
 int main(int argc, char** argv) {
   world_init();
   printf("hello world!\n");
-//  simplecycle();
-//  simplecycle2();
+  simplecycle();
+  simplecycle2();
   wheel();
 //  multi_collect();
 //  doubly_linked_list;

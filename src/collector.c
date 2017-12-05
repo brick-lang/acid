@@ -51,6 +51,8 @@ void collector_terminate(collector_t *collector) {
   locker_start2(collector, collector->forward);
   collector->terminated = true;
   collector_set_forward(collector, NULL);
+  assert(counter_done(collector->count));
+  locker_end();
 }
 
 void collector_set_forward(collector_t *collector, collector_t *f) {
@@ -164,6 +166,7 @@ bool collector_run(collector_t* collector) {
           safelist_size(collector->clean_list),
           safelist_size(collector->collect),
           safelist_size(collector->rebuild_list));
+  HERE_MSG(collstr);
 
   locker_start2(collector, collector->forward);
   bool done = counter_done(collector->count);

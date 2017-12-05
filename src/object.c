@@ -141,6 +141,7 @@ void object_del(Object *obj) {
 //}
 
 void object_die(Object *obj) {
+  bool has_phantoms = false;
   List *lks; // List<link_t>
   list_new(&lks);
 
@@ -153,14 +154,18 @@ void object_die(Object *obj) {
   assert(obj->count[0] == 0);
   assert(obj->count[1] == 0);
   if (obj->count[2] > 0) {
-    HERE_MSG("You have phantoms! Spooky!");
-    quick_exit(-1); // fail fast and hard
+    has_phantoms = true;
+    // HERE_MSG("You have phantoms! Spooky!");
+    // quick_exit(-1); // fail fast and hard
   }
   locker_end();
 
-  // HERE_MSG("die=%d", list_size(lks)
+  sprintf(objstr, "die=%zu", list_size(lks));
+  HERE_MSG(objstr);
+
   LIST_FOREACH(lk, lks, { link_destroy(lk); });
-  object_del(obj);
+  if (!has_phantoms)
+    object_del(obj);
 }
 
 // Pseudo: PhantomizeNode

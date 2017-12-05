@@ -2,12 +2,15 @@
 #include <assert.h>
 #include "../lib/collectc/include/list.h"
 #include "worker.h"
+#include "locker.h"
+
 #define NUM_WORKERS 1
 
 static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t worker_synchro_mutex;
 static List *work; // List<xthread_t>
 static volatile bool endtime = false;
+extern _Thread_local locker_t* current_locks;
 
 void workers_setup() {
   list_new(&work);
@@ -48,7 +51,13 @@ int worker_run(void*_) {
     if (xthread != NULL) {
       xthread_run(xthread);
     }
-    if (endtime) return 0;
+
+    // time for cleanup
+    if (endtime) {
+      // destroy the thread-local locker (if it exists)
+      if (current_locks != NULL) locker_destroy(current_locks);
+      return 0;
+    }
   }
 }
 

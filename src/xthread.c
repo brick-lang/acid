@@ -4,8 +4,8 @@
 #include "xthread.h"
 #include "worker.h"
 
-static volatile int count = 0;
 static wrappedlock_t *lock = NULL;
+static volatile int count = 0;
 
 xthread_t *xthread_create(){
   if (lock == NULL) {
@@ -15,6 +15,10 @@ xthread_t *xthread_create(){
   xthread->run = NULL;
   xthread->runarg = NULL;
   return xthread;
+}
+
+void xthread_destroy(xthread_t *xthrd) {
+  free(xthrd);
 }
 
 void xthread_start(xthread_t* xthrd) {
@@ -49,16 +53,12 @@ void xthread_run(xthread_t *xthrd) {
   if (again) {
     worker_add(xthrd);
   } else {
-    locker_start1(lock);
     xthread_destroy(xthrd);
+    locker_start1(lock);
     count--;
     if(count == 0) {
       cnd_broadcast(&lock->cond);
     }
     locker_end();
   }
-}
-
-void xthread_destroy(xthread_t *xthrd) {
-  free(xthrd);
 }

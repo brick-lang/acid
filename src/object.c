@@ -209,25 +209,21 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   if (obj->count[obj->which] > 0) {
     locker_end();
     list_destroy(phantoms);
-    return;
-  } else if (obj->count[bit_flip(obj->which)] > 0) {
-    obj->which = bit_flip(obj->which);
-    if (!obj->phantomized) {
-      phantomize = true;
-      obj->phantomized = true;
-      assert(obj->collector != NULL);
-      obj->phantomization_complete = false;
-      HASHTABLE_FOREACH(entry, obj->links, { list_add_first(phantoms, entry); });
-    }
-  } else { // phantom count is > 0, but weak and strong are zero.
-    if (!obj->phantomized) {
-      phantomize = true;
-      obj->phantomized = true;
-      assert(obj->collector != NULL);
-      obj->phantomization_complete = false;
-      HASHTABLE_FOREACH(entry, obj->links, { list_add(phantoms, entry); });
-    }
+    return; // fast exit
   }
+
+  if (obj->count[bit_flip(obj->which)] > 0) {
+    obj->which = bit_flip(obj->which);
+  }
+  // phantom count is > 0, but weak and strong are zero.
+  if (!obj->phantomized) {
+    phantomize = true;
+    obj->phantomized = true;
+    assert(obj->collector != NULL);
+    obj->phantomization_complete = false;
+    HASHTABLE_FOREACH(entry, obj->links, { list_add_first(phantoms, entry); });
+  }
+
   locker_end();
 
   HERE_MSG(object_to_string(obj));
@@ -268,12 +264,11 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
       locker_end();
       //})
     }
-    list_destroy(phantoms);
-
     locker_start1(obj);
     obj->phantomization_complete = true;
     locker_end();
   }
+  list_destroy(phantoms);
 }
 
 void object_rebuild_link(safelist_t *rebuildNext, link_t *const lk) {

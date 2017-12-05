@@ -8,12 +8,12 @@
 #include "locker.h"
 #include "lockable.h"
 
-static _Thread_local locker_t *current_locks = NULL;
+_Thread_local locker_t *current_locks = NULL;
 
 locker_t *locker_create() {
   locker_t *locker = malloc(sizeof(locker_t));
   // TODO: check CC_OK here
-  treetable_new(complock_compare, &locker->locks);
+  treetable_new((int (*)(const void *, const void *)) complock_compare, &locker->locks);
   list_new(&locker->stack);
   return locker;
 }
@@ -50,17 +50,23 @@ void locker_start(int locks_count, void *locks[]) {
 
   // Sort the current set of locks
   TreeSet *tlocks = NULL; // TreeSet<complock_t>
-  treeset_new(complock_compare, &tlocks);
+  treeset_new((int (*)(const void *, const void *)) complock_compare, &tlocks);
   for (int i = 0; i < locks_count; i++) {
-    void *lock = locks[i];
-    if (lock != NULL && ((lockable_t *) lock)->cmplock != NULL) {
-      treeset_add(tlocks, ((lockable_t *) lock)->cmplock);
+    if (locks[i] != NULL) {
+      lockable_t *lock = locks[i];
+      if (lock->cmplock != NULL) {
+        treeset_add(tlocks, lock->cmplock);
+      }
     }
   }
 
   TreeSet *new_locks = NULL; // TreeSet<complock_t>
-  treeset_new(complock_compare, &new_locks);
+  treeset_new((int (*)(const void *, const void *)) complock_compare, &new_locks);
   list_add_last(lk->stack, new_locks);
+
+  if (treeset_size(tlocks) == 0){
+    ;
+  }
 
   TreeSetIter treeSetIter;
   treeset_iter_init(&treeSetIter, tlocks);

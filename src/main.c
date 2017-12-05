@@ -2,6 +2,7 @@
 #include <here.h>
 #include <link.h>
 #include <assert.h>
+#include <locker.h>
 #include "../lib/collectc/include/list.h"
 #include "../lib/collectc/include/deque.h"
 #include "worker.h"
@@ -9,6 +10,8 @@
 #include "../lib/collectc/include/hashset.h"
 
 char debugmsg[200];
+
+void mark_and_sweep();
 
 void world_init() {
   root_setup();
@@ -21,31 +24,32 @@ void world_teardown() {
 }
 
 void simplecycle() {
-  root_t a = {0}, b = {0};
-  root_alloc(&a);
-  root_alloc(&b);
+  root_t *a = root_create();
+  root_t *b = root_create();
+  root_alloc(a);
+  root_alloc(b);
 
-  object_set(a.ref, "x", b.ref);
-  object_set(b.ref, "x", a.ref);
-  object_set(a.ref, "y", a.ref);
+  object_set(a->ref, "x", b->ref);
+  object_set(b->ref, "x", a->ref);
+  object_set(a->ref, "y", a->ref);
 
 
-  sprintf(debugmsg, "a = %s", object_to_string(a.ref));
+  sprintf(debugmsg, "a = %s", object_to_string(a->ref));
   HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(b.ref));
+  sprintf(debugmsg, "b = %s", object_to_string(b->ref));
   HERE_MSG(debugmsg);
 
-  Object *pa = a.ref;
-  Object *pb = b.ref;
+  Object *pa = a->ref;
+  Object *pb = b->ref;
 
-  root_free(&b);
+  root_free(b);
 
   sprintf(debugmsg, "a = %s", object_to_string(pa));
   HERE_MSG(debugmsg);
   sprintf(debugmsg, "b = %s", object_to_string(pb));
   HERE_MSG(debugmsg);
 
-  root_free(&a);
+  root_free(a);
 
   sprintf(debugmsg, "a = %s", object_to_string(pa));
   HERE_MSG(debugmsg);
@@ -54,33 +58,35 @@ void simplecycle() {
 }
 
 void simplecycle2() {
-  root_t a = {0}, b = {0};
-  root_alloc(&a);
-  root_alloc(&b);
+  root_t *a = root_create();
+  root_t *b = root_create();
 
-  object_set(a.ref, "x", b.ref);
-  object_set(b.ref, "x", a.ref);
+  root_alloc(a);
+  root_alloc(b);
 
-  sprintf(debugmsg, "a = %s", object_to_string(a.ref));
+  object_set(a->ref, "x", b->ref);
+  object_set(b->ref, "x", a->ref);
+
+  sprintf(debugmsg, "a = %s", object_to_string(a->ref));
   HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(b.ref));
+  sprintf(debugmsg, "b = %s", object_to_string(b->ref));
   HERE_MSG(debugmsg);
 
-  Object *pa = a.ref;
-  Object *pb = b.ref;
+  Object *pa = a->ref;
+  Object *pb = b->ref;
 
-  root_free(&b);
+  root_free(b);
 
   sprintf(debugmsg, "a = %s", object_to_string(pa));
   HERE_MSG(debugmsg);
   sprintf(debugmsg, "b = %s", object_to_string(pb));
   HERE_MSG(debugmsg);
 
-  object_set(a.ref, "y", NULL);
+  object_set(a->ref, "y", NULL);
 
   thrd_sleep(&(struct timespec) {.tv_nsec=3000000}, NULL);
 
-  root_free(&a);
+  root_free(a);
 
   sprintf(debugmsg, "a = %s", object_to_string(pa));
   HERE_MSG(debugmsg);
@@ -88,10 +94,58 @@ void simplecycle2() {
   HERE_MSG(debugmsg);
 }
 
+void wheel() {
+  root_t *wheel = root_create();
+  root_alloc(wheel);
+
+  root_t *prev = root_create();
+  root_set(prev, wheel->ref);
+
+  const int n = 500;
+  root_t *x = NULL;
+  for (int i = 0; i <= n; i++) {
+    x = root_create();
+    root_alloc(x);
+    object_set(prev->ref, "next", x->ref);
+    root_set(prev, x->ref);
+    if (i == n) object_set(x->ref, "next", wheel->ref);  // close the loop
+    root_free(x);
+  }
+  root_free(prev);
+
+  HERE_MSG("Finished creating cycle");
+
+  Object *o = NULL;
+  for (int i = 0; i < 300; i++) {
+    // HERE_PREFIX_MSG("i=", i);
+    locker_start1(wheel->ref);
+    o = object_get(wheel->ref, "next");
+    locker_end();
+
+    locker_start2(wheel->ref, o);
+    assert(o != NULL);
+    root_set(wheel, o);
+    locker_end();
+  }
+  xthread_wait_for_zero_threads();
+  mark_and_sweep();
+  for (int i = 0; i < 300; i++) {
+    // HERE_PREFIX_MSG("i=", i);
+    locker_start1(wheel->ref);
+    o = object_get(wheel->ref, "next");
+    locker_end();
+
+    locker_start2(wheel->ref, o);
+    assert(o != NULL);
+    root_set(wheel, o);
+    locker_end();
+  }
+}
+
+
 extern List *roots;
 extern HashSet *objects;
 extern volatile int objectslive;
-
 void mark_and_sweep(){
   HERE_MSG("Mark and Sweep");
 
@@ -167,8 +221,15 @@ void status() {
 int main(int argc, char** argv) {
   world_init();
   printf("hello world!\n");
-  simplecycle();
+//  simplecycle();
 //  simplecycle2();
+  wheel();
+//  multi_collect();
+//  doubly_linked_list;
+//  clique();
+//  benzene_ring_scalability(6);
+//  object_set_test;
+
   status();
   world_teardown();
 }

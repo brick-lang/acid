@@ -12,6 +12,12 @@ void root_setup() {
   list_new(&roots);
 }
 
+root_t *root_create(){
+  root_t *root = malloc(sizeof(root));
+  root->ref = NULL;
+  return root;
+}
+
 void root_alloc(root_t *root) {
   if (root->ref != NULL) {
     object_dec_strong(root->ref);
@@ -39,7 +45,6 @@ void root_set(root_t *root, Object *obj) {
   if (obj != NULL) list_add(roots, obj);
   mtx_unlock(&root_synchro_mutex);
 
-  // TODO: check if obj is NULL. I get the feeling we should be free()ing the old ref if it is.
   root->ref = obj;
   locker_end();
 }
@@ -47,8 +52,5 @@ void root_set(root_t *root, Object *obj) {
 void root_free(root_t *root) {
   HERE();
   root_set(root, NULL);
-}
-
-Object *root_get(root_t *root) {
-  return root->ref;
+  free(root);
 }

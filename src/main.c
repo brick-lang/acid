@@ -1,7 +1,12 @@
 #define DEBUG
 #include <here.h>
+#include <link.h>
+#include <assert.h>
+#include "../lib/collectc/include/list.h"
+#include "../lib/collectc/include/deque.h"
 #include "worker.h"
 #include "root.h"
+#include "../lib/collectc/include/hashset.h"
 
 char debugmsg[200];
 
@@ -79,10 +84,78 @@ void simplecycle2() {
   HERE_MSG(debugmsg);
 }
 
+extern List *roots;
+extern HashSet *objects;
+extern volatile int objectslive;
+
+void mark_and_sweep(){
+  HERE_MSG("Mark and Sweep");
+
+  Deque *pqueue = NULL;
+  deque_new(&pqueue);
+
+  if (roots == NULL) {
+    HERE_MSG("null queue");
+  } else {
+    sprintf(debugmsg, "size %zu", list_size(roots));
+    HERE_MSG(debugmsg);
+  }
+
+  if (list_size(roots) > 0) {
+    LIST_FOREACH(item, roots, { deque_add_last(pqueue, item); });
+  }
+
+  Object *obj;
+  while (deque_size(pqueue) > 0) {
+    deque_remove_first(pqueue, (void **) &obj);
+    if (!obj->mark) {
+      obj->mark = true;
+      if (hashtable_size(obj->links) > 0) {
+        HASHTABLE_FOREACH(l, obj->links, {
+          link_t *li = ((TableEntry*)l)->value;
+          deque_add_last(pqueue, li->target);
+        })
+      }
+    }
+  }
+
+  HashSet *copy;
+  hashset_new(&copy);
+  if (hashset_size(objects) > 0) {
+    HASHSET_FOREACH(orig, objects, { hashset_add(copy, orig); })
+  }
+  int live = 0;
+  objectslive = object_live();
+  HASHSET_FOREACH(so, copy, {
+    Object *o = so;
+    if (o->mark) {
+      assert(o->count[o->which] > 0);
+      assert(o->count[bit_flip(o->which)] >= 0);
+      assert(o->count[2] == 0); // No ghosts allowed!
+      assert(!o->deleted);
+      assert(o->collector == NULL);
+      live++;
+      o->mark = false;
+    } else {
+      assert(o->deleted);
+    }
+  })
+
+  sprintf(debugmsg, "After Mark and Sweep, live = %d", live);
+  HERE_MSG(debugmsg);
+  sprintf(debugmsg, "live = %d; slive = %d", live, objectslive);
+  HERE_MSG(debugmsg);
+  if (live == objectslive) {
+    HERE_MSG(" MS == B");
+  } else {
+    HERE_MSG(" MS != B");
+  }
+}
+
 void status() {
   xthread_wait_for_zero_threads();
   object_status();
-//  mark_and_sweep();
+  mark_and_sweep();
 }
 
 int main(int argc, char** argv) {

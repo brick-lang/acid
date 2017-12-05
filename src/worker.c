@@ -32,7 +32,7 @@ int worker_run(void*_) {
   while(true) {
     xthread_t *xthread = worker_get();
     if (xthread != NULL) {
-      xthread->run(xthread->runarg);
+      xthread_run(xthread);
     }
   }
 }

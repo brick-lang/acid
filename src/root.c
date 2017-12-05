@@ -4,7 +4,8 @@
 #include "root.h"
 
 static mtx_t root_synchro_mutex;
-static List *roots;
+
+List *roots;
 
 void root_setup() {
   mtx_init(&root_synchro_mutex, mtx_plain | mtx_recursive);

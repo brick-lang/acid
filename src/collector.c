@@ -57,7 +57,7 @@ void collector_terminate(collector_t *collector) {
 
 void collector_set_forward(collector_t *collector, collector_t *f) {
   locker_start3(collector, collector->forward, f);
-  if (collector_equals(f, collector->forward)) {
+  if (f == collector->forward) { // check equality based on address, not value
     locker_end();
     return;
   }

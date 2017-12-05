@@ -17,7 +17,7 @@ xthread_t *xthread_create(){
   return xthread;
 }
 
-int xthread_xrun(xthread_t *xthrd) {
+bool xthread_xrun(xthread_t *xthrd) {
   return xthrd->run(xthrd->runarg);
 }
 
@@ -49,7 +49,7 @@ bool xthread_wait_for_zero_threads() {
 
 void xthread_run(xthread_t *xthrd) {
   bool again = false;
-  again = (bool)xthread_xrun(xthrd);
+  again = xthread_xrun(xthrd);
   // TODO: Error handle here (stack trace, etc.)
   if (again) {
     worker_add(xthrd);

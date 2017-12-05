@@ -25,7 +25,7 @@ typedef struct Object {
 
 void object_system_setup();
 Object *object_create();
-int object_live(Object *obj);
+int object_live();
 Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
 char *object_to_string(Object *obj);

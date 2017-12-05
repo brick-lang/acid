@@ -10,8 +10,8 @@
 #include "../lib/collectc/include/hashset.h"
 
 static complock_t *objects_lock = NULL;
-static HashSet *objects = NULL; // Set<Object>
-volatile static int objectlive = 0;
+HashSet *objects = NULL; // Set<Object>
+volatile int objectslive = 0;
 static lockable_t *objects_lockable = NULL;
 
 static char objstr[120];
@@ -32,7 +32,7 @@ void object_system_setup() {
   }
   objects_lock = complock_create(PRIORITY_GLOBAL, UINT_MAX);
   hashset_new(&objects);
-  objectlive = 0;
+  objectslive = 0;
   objects_lockable = malloc(sizeof(lockable_t));
   objects_lockable->cmplock = objects_lock;
 }
@@ -125,8 +125,7 @@ void object_del(Object *obj) {
   obj->deleted = true;
   object_set_collector(obj, NULL);
 
-  HERE_MSG("Deleted:");
-  HERE_MSG(object_to_string(obj));
+  HERE_PREFIX_MSG("Deleted: ", object_to_string(obj));
   locker_end();
 }
 //#else
@@ -146,9 +145,13 @@ void object_die(Object *obj) {
 
   locker_start1(obj);
   assert(!obj->deleted);
-  HASHTABLE_FOREACH(entry, obj->links, {
-    list_add(lks, entry->value);
-  });
+
+  if (hashtable_size(obj->links) > 0) {
+    HASHTABLE_FOREACH(entry, obj->links, {
+      list_add(lks, entry->value);
+    });
+  }
+
   hashtable_remove_all(obj->links);
   assert(obj->count[0] == 0);
   assert(obj->count[1] == 0);
@@ -163,6 +166,9 @@ void object_die(Object *obj) {
   HERE_MSG(objstr);
 
   LIST_FOREACH(lk, lks, { link_destroy(lk); });
+
+  list_destroy(lks);
+
   if (!has_phantoms)
     object_del(obj);
 }
@@ -545,6 +551,27 @@ void object_status() {
   sprintf(objstr, "live=%d", live);
   HERE_MSG(objstr);
 
-  objectlive = live;
+  objectslive = live;
+}
+
+int object_live() {
+  HashSet *copy;
+  hashset_new(&copy);
+
+  locker_start1(objects_lockable);
+  HASHSET_FOREACH(obj, objects, { hashset_add(copy, obj); });
+  locker_end();
+
+  int live = 0;
+  HASHSET_FOREACH(val, copy, {
+    Object *obj = val;
+    locker_start1(obj);
+    assert(obj->count[0] >= 0); // : object_to_string(obj);
+    assert(obj->count[1] >= 0); // : object_to_string(obj);
+    assert(obj->count[2] == 0); // : object_to_string(obj);
+    if (!obj->deleted) live++;
+    locker_end();
+  });
+  return live;
 }
 

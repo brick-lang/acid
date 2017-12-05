@@ -6,7 +6,8 @@
 #include "idbaseobject.h"
 #include "here.h"
 
-char collstr[200];
+#define COLLSTRLEN 200
+char collstr[COLLSTRLEN];
 
 collector_t *collector_create() {
   collector_t *collector = (collector_t *) malloc(sizeof(collector_t));
@@ -71,7 +72,7 @@ void collector_set_forward(collector_t *collector, collector_t *f) {
 }
 
 char *collector_to_string(collector_t *collector) {
-  sprintf(collstr, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
+  snprintf(collstr, COLLSTRLEN, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
           (void*)collector, collector->id, safelist_size(collector->collect),
           safelist_size(collector->merged_list),
           (collector->forward == NULL ? -1 : (int)collector->forward->id));
@@ -154,7 +155,7 @@ bool collector_run(collector_t* collector) {
     object_clean_node(obj, collector);
   }
 
-  sprintf(collstr, "Done one cycle %s m=%zu,rc=%zu,cl=%zu,co=%zu,r=%zu",
+  snprintf(collstr, COLLSTRLEN, "Done one cycle %s m=%zu,rc=%zu,cl=%zu,co=%zu,r=%zu",
           counter_to_string(collector->count),
           safelist_size(collector->merged_list),
           safelist_size(collector->recovery_list),

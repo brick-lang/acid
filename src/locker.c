@@ -64,10 +64,6 @@ void locker_start(int locks_count, void *locks[]) {
   treeset_new((int (*)(const void *, const void *)) complock_compare, &new_locks);
   list_add_last(lk->stack, new_locks);
 
-  if (treeset_size(tlocks) == 0){
-    ;
-  }
-
   TreeSetIter treeSetIter;
   treeset_iter_init(&treeSetIter, tlocks);
   complock_t *lock;
@@ -85,10 +81,10 @@ void locker_start(int locks_count, void *locks[]) {
     } else {
       int num = 0;
       TREETABLE_FOREACH(ll, lk->locks, fprintf(stderr, "NUM=%d\n", num++););
-      char *str = calloc(sizeof(char), 500);
-      sprintf(str, "Error! Possible deadlock %s\n", complock_to_string(lock)); // + " " + lk->locks
+      char str[200];
+      snprintf(str, 200, "Error! Possible deadlock %s\n", complock_to_string(lock)); // + " " + lk->locks
       HERE_MSG(str);
-      quick_exit(-1);
+      abort();
     }
   }
   treeset_destroy(tlocks);

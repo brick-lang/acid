@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "idbaseobject.h"
 #include "complock.h"
 
 complock_t* complock_create(priority_t priority, unsigned int id) {

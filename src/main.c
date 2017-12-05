@@ -9,7 +9,8 @@
 #include "root.h"
 #include "../lib/collectc/include/hashset.h"
 
-char debugmsg[200];
+#define DEBUGSTRLEN 300
+char debugstr[DEBUGSTRLEN];
 
 void mark_and_sweep();
 
@@ -34,27 +35,27 @@ void simplecycle() {
   object_set(a->ref, "y", a->ref);
 
 
-  sprintf(debugmsg, "a = %s", object_to_string(a->ref));
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(b->ref));
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
+  HERE_MSG(debugstr);
 
   Object *pa = a->ref;
   Object *pb = b->ref;
 
   root_free(b);
 
-  sprintf(debugmsg, "a = %s", object_to_string(pa));
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(pb));
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  HERE_MSG(debugstr);
 
   root_free(a);
 
-  sprintf(debugmsg, "a = %s", object_to_string(pa));
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(pb));
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  HERE_MSG(debugstr);
 }
 
 void simplecycle2() {
@@ -67,20 +68,20 @@ void simplecycle2() {
   object_set(a->ref, "x", b->ref);
   object_set(b->ref, "x", a->ref);
 
-  sprintf(debugmsg, "a = %s", object_to_string(a->ref));
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(b->ref));
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
+  HERE_MSG(debugstr);
 
   Object *pa = a->ref;
   Object *pb = b->ref;
 
   root_free(b);
 
-  sprintf(debugmsg, "a = %s", object_to_string(pa));
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(pb));
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  HERE_MSG(debugstr);
 
   object_set(a->ref, "y", NULL);
 
@@ -88,10 +89,10 @@ void simplecycle2() {
 
   root_free(a);
 
-  sprintf(debugmsg, "a = %s", object_to_string(pa));
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "b = %s", object_to_string(pb));
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  HERE_MSG(debugstr);
 }
 
 void wheel() {
@@ -155,8 +156,8 @@ void mark_and_sweep(){
   if (roots == NULL) {
     HERE_MSG("null queue");
   } else {
-    sprintf(debugmsg, "size %zu", list_size(roots));
-    HERE_MSG(debugmsg);
+    snprintf(debugstr, DEBUGSTRLEN, "size %zu", list_size(roots));
+    HERE_MSG(debugstr);
   }
 
   if (list_size(roots) > 0) {
@@ -201,10 +202,10 @@ void mark_and_sweep(){
   })
   hashset_destroy(copy);
 
-  sprintf(debugmsg, "After Mark and Sweep, live = %d", live);
-  HERE_MSG(debugmsg);
-  sprintf(debugmsg, "live = %d; slive = %d", live, objectslive);
-  HERE_MSG(debugmsg);
+  snprintf(debugstr, DEBUGSTRLEN, "After Mark and Sweep, live = %d", live);
+  HERE_MSG(debugstr);
+  snprintf(debugstr, DEBUGSTRLEN, "live = %d; slive = %d", live, objectslive);
+  HERE_MSG(debugstr);
   if (live == objectslive) {
     HERE_MSG(" MS == B");
   } else {

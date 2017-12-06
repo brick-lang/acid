@@ -1,6 +1,6 @@
 #include <assert.h>
-#include <object.h>
-#include <lockable.h>
+#include "object.h"
+#include "lockable.h"
 #include "collector.h"
 #include "locker.h"
 #include "idbaseobject.h"

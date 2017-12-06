@@ -1,4 +1,10 @@
-#include <c11threads.h>
+#include <limits.h>
+#ifdef __STDC_NO_THREADS__
+#include "../lib/tinycthread/tinycthread.h"
+#else
+#include <threads.h>
+#endif
+
 #include <assert.h>
 #include "../lib/collectc/include/list.h"
 #include "worker.h"

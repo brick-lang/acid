@@ -1,3 +1,10 @@
+#include <limits.h>
+#ifdef __STDC_NO_THREADS__
+#include "../lib/tinycthread/tinycthread.h"
+#else
+#include <threads.h>
+#endif
+
 #include <stdlib.h>
 #include <assert.h>
 #include "locker.h"

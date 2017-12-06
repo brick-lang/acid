@@ -28,7 +28,7 @@ Object *object_create();
 int object_live();
 Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
-char *object_to_string(Object *obj);
+//char *object_to_string(Object *obj);
 void object_phantomize_node(Object* obj, struct collector_t *cptr);
 void object_recover_node(Object *obj, safelist_t *rebuildNext, struct collector_t *cptr);
 bool object_has_all_phantom_links(Object *obj);

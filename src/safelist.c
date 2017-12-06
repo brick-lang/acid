@@ -3,7 +3,7 @@
 #include "object.h"
 
 safelist_t *safelist_create(counter_t *c) {
-  safelist_t *safelist = (safelist_t*)malloc(sizeof(safelist_t));
+  safelist_t *safelist = malloc(sizeof(safelist_t));
   *(wrappedlock_t**)&safelist->lock = wrappedlock_create(PRIORITY_LIST);
   *(counter_t**)&safelist->count = c;
   list_new((List **) &safelist->data);
@@ -65,7 +65,8 @@ void safelist_forward(safelist_t *sl, safelist_t *forward_to) {
   locker_start2(sl->lock, forward_to->lock);
   while (true) {
     Object *obj = safelist_poll(sl);
-    if (obj == NULL) break;
+    if (obj == NULL)
+      break;
     safelist_add(forward_to, obj);
   }
   sl->_forward = forward_to;

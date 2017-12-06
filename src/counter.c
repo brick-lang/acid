@@ -5,11 +5,8 @@
 #include "counter.h"
 #include "locker.h"
 
-#define COUNTSTRLEN 50
-static char countstr[COUNTSTRLEN+1];
-
 counter_t* counter_create() {
-  counter_t* counter = (counter_t*)malloc(sizeof(counter_t));
+  counter_t* counter = malloc(sizeof(counter_t));
   counter->ref_count = 0;
   counter->store_count = 0;
   counter->lock_counter = wrappedlock_create(PRIORITY_COLLECTCOUNTER);
@@ -53,10 +50,10 @@ void counter_dec_store(counter_t *counter) {
   locker_end();
 }
 
-char *counter_to_string(counter_t *counter) {
-  debug_snprintf(countstr, COUNTSTRLEN, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
-  return countstr;
-}
+//char *counter_to_string(counter_t *counter) {
+//  debug_snprintf(countstr, COUNTSTRLEN, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
+//  return countstr;
+//}
 
 bool counter_action(counter_t *counter) {
   bool retval;
@@ -64,7 +61,6 @@ bool counter_action(counter_t *counter) {
   while (true) {
     if (counter->store_count > 0) { retval = true; break; }
     if (counter->ref_count == 0) { retval = false; break; }
-    HERE_MSG(counter_to_string(counter));
     cnd_wait(&counter->lock_counter->cond, &counter->lock_counter->cmplock->mtx);
     // TODO: check thrd_error here
   }

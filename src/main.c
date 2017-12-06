@@ -9,10 +9,6 @@
 #include "locker.h"
 #include "link.h"
 
-
-#define DEBUGSTRLEN 300
-char debugstr[DEBUGSTRLEN+1];
-
 static List* keylist = NULL;
 
 void mark_and_sweep();
@@ -41,30 +37,8 @@ void simplecycle() {
   object_set(b->ref, "x", a->ref);
   object_set(a->ref, "y", a->ref);
 
-
-  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
-  HERE_MSG(debugstr);
-
-#ifdef DEBUG
-  Object *pa = a->ref;
-  Object *pb = b->ref;
-#endif
-
   root_free(b);
-
-  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
-  HERE_MSG(debugstr);
-
   root_free(a);
-
-  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
-  HERE_MSG(debugstr);
 }
 
 void simplecycle2() {
@@ -77,33 +51,11 @@ void simplecycle2() {
   object_set(a->ref, "x", b->ref);
   object_set(b->ref, "x", a->ref);
 
-  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
-  HERE_MSG(debugstr);
-
-#ifdef DEBUG
-  Object *pa = a->ref;
-  Object *pb = b->ref;
-#endif
-
   root_free(b);
-
-  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
-  HERE_MSG(debugstr);
-
   object_set(a->ref, "y", NULL);
 
   thrd_sleep(&(struct timespec) {.tv_nsec=3000000}, NULL);
-
   root_free(a);
-
-  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
-  HERE_MSG(debugstr);
 }
 
 void wheel() {
@@ -113,7 +65,7 @@ void wheel() {
   root_t *prev = root_create();
   root_set(prev, wheel->ref);
 
-  const int n = 500;
+  const int n = 499;
   root_t *x = NULL;
   for (int i = 0; i <= n; i++) {
     x = root_create();
@@ -129,7 +81,6 @@ void wheel() {
 
   Object *o = NULL;
   for (int i = 0; i < 300; i++) {
-    // HERE_PREFIX_MSG("i=", i);
     locker_start1(wheel->ref);
     o = object_get(wheel->ref, "next");
     locker_end();
@@ -142,7 +93,6 @@ void wheel() {
   xthread_wait_for_zero_threads();
   mark_and_sweep();
   for (int i = 0; i < 300; i++) {
-    // HERE_PREFIX_MSG("i=", i);
     locker_start1(wheel->ref);
     o = object_get(wheel->ref, "next");
     locker_end();
@@ -280,7 +230,7 @@ void benzene_ring_scalability(int size) {
     }
   }
 
-  HERE_MSG("Benzene finished");
+  printf("Benzene x%d constructed.\n", n);
   xthread_wait_for_zero_threads();
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
 
@@ -289,7 +239,7 @@ void benzene_ring_scalability(int size) {
   }
   xthread_wait_for_zero_threads();
   clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
-  printf("Time=%lf\n", 0.001*(end-start));
+  printf("Collection time=%lf\n", 0.001*(end-start));
 }
 
 void benzene_ring_ms_test() {
@@ -394,17 +344,16 @@ extern List *roots;
 extern HashSet *objects;
 extern volatile int objectslive;
 void mark_and_sweep(){
-  HERE_MSG("Mark and Sweep");
+  printf("Mark and Sweep\n");
 
   Deque *pqueue = NULL;
   deque_new(&pqueue);
 
   if (roots == NULL) {
-    HERE_MSG("null queue");
+    printf("null queue\n");
   } else {
-    debug_snprintf(debugstr, DEBUGSTRLEN, "size %zu", list_size(roots));
-    HERE_MSG(debugstr);
-  }
+    printf("size %zu\n", list_size(roots));
+      }
 
   if (list_size(roots) > 0) {
     LIST_FOREACH(item, roots, { deque_add_last(pqueue, item); });
@@ -450,10 +399,9 @@ void mark_and_sweep(){
   }
   hashset_destroy(copy);
 
-  debug_snprintf(debugstr, DEBUGSTRLEN, "After Mark and Sweep, live = %d", live);
-  HERE_MSG(debugstr);
-  debug_snprintf(debugstr, DEBUGSTRLEN, "live = %d; slive = %d", live, objectslive);
-  HERE_MSG(debugstr);
+  printf("After Mark and Sweep, live = %d\n", live);
+  printf("live = %d; slive = %d\n", live, objectslive);
+
   if (live == objectslive) {
     printf(" MS == B\n");
   } else {
@@ -477,17 +425,15 @@ int main(int argc, char** argv) {
   multi_collect();
   doubly_linked_list();
   clique();
-  benzene_ring_scalability(6);
   benzene_ring_ms_test();
   object_set_test();
 
   for (int x = 1; x <= 16; ++x) {
     clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
     benzene_ring_scalability(x);
-    status();
-    clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
-    snprintf(debugstr, DEBUGSTRLEN, "Time for %d is %lf\n", x, 0.001*end-st);
-    HERE_MSG(debugstr);
+//    status();
+    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
+    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
   }
 
   status();

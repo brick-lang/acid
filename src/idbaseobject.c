@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 static atomic_uint object_id_count = 1;
 
@@ -25,9 +24,9 @@ int idbaseobject_hash_code(IdBaseObject* obj) { return obj->id; }
 
 int idbaseobject_equals(IdBaseObject* o1, IdBaseObject* o2) { return o1->id == o2->id; }
 
-char* idbaseobject_to_string(IdBaseObject* o) {
-  double max_len = floor(log10(o->id)) + 1 + 6;  // being generous
-  char* str = (char*)calloc((size_t) max_len, sizeof(char));
-  sprintf(str, "Obj[%d]", o->id);
-  return str;
-}
+//char* idbaseobject_to_string(IdBaseObject* o) {
+//  double max_len = floor(log10(o->id)) + 1 + 6;  // being generous
+//  char* str = (char*)calloc((size_t) max_len, sizeof(char));
+//  sprintf(str, "Obj[%d]", o->id);
+//  return str;
+//}

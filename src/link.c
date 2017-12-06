@@ -5,13 +5,8 @@
 #include "locker.h"
 #include "collector.h"
 
-#ifdef DEBUG
-#define LINKSTRLEN 200
-static char linkstr[LINKSTRLEN+1];
-#endif
-
 link_t *link_create(Object *s) {
-  link_t *link = (link_t*)malloc(sizeof(link_t));
+  link_t *link = malloc(sizeof(link_t));
   *(Object **)&link->src = s;
   link->target = NULL;
   link->which = BIT_ZERO;
@@ -27,18 +22,11 @@ link_t *link_create(Object *s) {
  * @param link the link to destroy
  */
 void link_destroy(link_t *link) {
-  debug_snprintf(linkstr, LINKSTRLEN, "before: #<Object:%p id:%d> => #<Object:%p id:%d>",
-          (void*)link->src, link->src->id, (void*)link->target, link->target->id);
-  HERE_MSG(linkstr);
-
   locker_start1(link->src);   // lock on the source object
   bool target_null = (link->target == NULL);
   locker_end();
   if (!target_null) {
     link_dec(link, false);
-
-    debug_snprintf(linkstr, LINKSTRLEN, "after: %s", object_to_string(link->target));
-    HERE_MSG(linkstr);
   }
   free(link);
 }
@@ -48,7 +36,6 @@ void link_phantomize(link_t *link) {
   locker_start2(link->target, link->src);
   if (link->target == NULL || link->phantomized) {
     locker_end();
-    // assert Here.here("locks remaining=" + Locker.currentLocks.get().locks.size());
     return;
   }
   link->target->count[2]++;
@@ -58,11 +45,9 @@ void link_phantomize(link_t *link) {
   link->phantomized = true;
   assert(collector_equals(link->target->collector, link->src->collector)); // : "diff1: t="+target.collector+" s="+src.collector;
   locker_end();
-  // assert Here.here("locks remaining=" + Locker.currentLocks.get().locks.size());
 }
 
 void link_dec_phantomizing(link_t* link) {
-  bool merge = false;
   locker_start2((void *) link->target, (void *) link->src);
   if (link->phantomized) {
     object_dec_phantom(link->target);
@@ -74,17 +59,11 @@ void link_dec_phantomizing(link_t* link) {
       return;
     }
     assert (link->target->count[link->which] >= 0); // : target.toString()
-    merge = false;
     if (ncount == 0 && link->which == link->target->which) {
       collector_add_object(link->target->collector, link->target);
     }
   }
   locker_end();
-  // assert Here.here("locks remaining=" + Locker.currentLocks.get().locks.size());
-  // assert Here.here("until now");
-  if (merge) {
-    object_merge_collectors(link->src, link->target);
-  }
 }
 
 void link_dec(link_t* link, bool phantomizing) {
@@ -103,7 +82,6 @@ void link_dec(link_t* link, bool phantomizing) {
     object_dec(link->target, link->which);
   }
   locker_end();
-  // assert Here.here("locks remaining=" + Locker.currentLocks.get().locks.size());
 }
 
 

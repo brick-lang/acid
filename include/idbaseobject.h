@@ -1,5 +1,3 @@
-/* Copyright 2016 Katherine Whitlock */
-
 #ifndef IDBASEOBJECT_H
 #define IDBASEOBJECT_H
 
@@ -14,7 +12,7 @@ IdBaseObject* idbaseobject_create();
 void idbaseobject_init(IdBaseObject *);
 int idbaseobject_hash_code(IdBaseObject* obj);
 int idbaseobject_equals(IdBaseObject* o1, IdBaseObject* o2);
-char* idbaseobject_to_string(IdBaseObject* o);
+//char* idbaseobject_to_string(IdBaseObject* o);
 
 #ifdef __cplusplus
 }

@@ -29,7 +29,7 @@ typedef struct collector_t {
 collector_t *collector_create();
 void collector_check_not_terminated(collector_t *collector);
 void collector_set_forward(collector_t* collector, collector_t *f);
-char* collector_to_string(collector_t* collector);
+//char* collector_to_string(collector_t* collector);
 void collector_add_object(collector_t* add_to, Object *o);
 void collector_request_delete(Object *obj);
 bool collector_run(collector_t *collector);

@@ -3,7 +3,7 @@
 #include "complock.h"
 
 complock_t* complock_create(priority_t priority, unsigned int id) {
-  complock_t* complock = (complock_t*)malloc(sizeof(complock_t));
+  complock_t* complock = malloc(sizeof(complock_t));
   *(unsigned int*)&complock->id = id;
   complock->priority = priority;
 
@@ -36,12 +36,12 @@ int complock_equals(complock_t* c1, complock_t* c2) {
   return c1->id == c2->id && c1->priority == c2->priority;
 }
 
-char* complock_to_string(complock_t* c) {
-  size_t max_len = 30;  // being generous
-  char* str = (char*)calloc(max_len, sizeof(char));
-  sprintf(str, "CompLock[prio=%d, id=%d]", c->priority, c->id);
-  return str;
-}
+//char* complock_to_string(complock_t* c) {
+//  size_t max_len = 30;  // being generous
+//  char* str = (char*)calloc(max_len, sizeof(char));
+//  sprintf(str, "CompLock[prio=%d, id=%d]", c->priority, c->id);
+//  return str;
+//}
 
 int complock_lock(complock_t* c) {
   return mtx_lock(&c->mtx);

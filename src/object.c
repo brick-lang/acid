@@ -2,7 +2,6 @@
 #include <assert.h>
 #include "idbaseobject.h"
 #include "link.h"
-#include "here.h"
 #include "lockable.h"
 #include "object.h"
 #include "collector.h"
@@ -13,9 +12,6 @@ static complock_t *objects_lock = NULL;
 HashSet *objects = NULL; // Set<Object>
 volatile int objectslive = 0;
 static lockable_t *objects_lockable = NULL;
-
-#define OBJSTRLEN 200
-static char objstr[OBJSTRLEN+1];
 
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
@@ -63,9 +59,6 @@ void object_inc_strong(Object *obj) {
   locker_start1(obj);
   assert(!obj->deleted);
   obj->count[obj->which]++;
-
-  HERE_MSG(object_to_string(obj));
-
   locker_end();
 }
 
@@ -80,16 +73,14 @@ void object_dec(Object *obj, bit_t w) {
     } else {
       if (obj->collector == NULL) {
         object_set_collector(obj, collector_create());
-        HERE();
         collector_add_object(obj->collector, obj);
+
+        // create and start a new collection task
         xthread_t *xthrd = xthread_create();
         xthrd->run = (bool (*)(void *)) collector_run;
         xthrd->runarg = obj->collector;
-        HERE();
         xthread_start(xthrd);
-        HERE_MSG("collector created");
       } else {
-        HERE_MSG(object_to_string(obj));
         collector_add_object(obj->collector, obj);
       }
     }
@@ -122,8 +113,6 @@ void object_del(Object *obj) {
   assert(!obj->deleted);
   obj->deleted = true;
   object_set_collector(obj, NULL);
-
-  HERE_PREFIX_MSG("Deleted: ", object_to_string(obj));
   locker_end();
 }
 //#else
@@ -160,11 +149,7 @@ void object_die(Object *obj) {
   }
   locker_end();
 
-  debug_snprintf(objstr, OBJSTRLEN, "die=%zu", list_size(lks));
-  HERE_MSG(objstr);
-
   LIST_FOREACH(lk, lks, { link_destroy(lk); });
-
   list_destroy(lks);
 
   if (!has_phantoms)
@@ -173,7 +158,6 @@ void object_die(Object *obj) {
 
 // Pseudo: PhantomizeNode
 void object_phantomize_node(Object *obj, struct collector_t *cptr) {
-  HERE_MSG(object_to_string(obj));
   bool phantomize = false;
   List *phantoms; //List<TableEntry<char*, link_t*>>
   list_new(&phantoms);
@@ -224,17 +208,7 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
 
   locker_end();
 
-  HERE_MSG(object_to_string(obj));
-  debug_snprintf(objstr, OBJSTRLEN, "phantomize=%s/%s => #<Object:%p id:%d>/%zu",
-          (phantomize ? "true" : "false"),
-          (obj->phantomized ? "true" : "false"),
-          (void*)obj, obj->id, list_size(phantoms));
-  HERE_MSG(objstr);
-
   if (phantomize) {
-    debug_snprintf(objstr, OBJSTRLEN, "%zu", list_size(phantoms));
-    HERE_MSG(objstr);
-
     // Between here and the following syncs
     // the actual contents of the links could
     // be changed. New links could be added
@@ -244,10 +218,7 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
     list_iter_init(&li, phantoms);
     TableEntry *en = NULL;
     while (list_iter_next(&li, (void **) &en) != CC_ITER_END) {
-      //LIST_FOREACH(en, phantoms, {
       link_t *lk = en->value;
-
-      HERE_PREFIX_MSG("ph=", object_to_string(lk->target));
 
       locker_start2(obj, lk->target);
       assert(obj->phantomized);
@@ -255,13 +226,10 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
         assert(lk->src->phantomized);
         assert(lk->src->collector != NULL);
         link_phantomize(lk);
-        HERE_PREFIX_MSG("phantom: ", object_to_string(lk->target));
       }
-
-      //HERE_PREFIX_MSG("locks remaining=", Locker.current_locks.locks.size());
       locker_end();
-      //})
     }
+
     locker_start1(obj);
     obj->phantomization_complete = true;
     locker_end();
@@ -329,7 +297,7 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
   assert(!obj->deleted);
   if (obj->collector != NULL)
     object_set_collector(obj, collector_update(obj->collector));
-  HERE_PREFIX_MSG("rebuild:", object_to_string(obj));
+
   if (obj->count[obj->which] > 0) {
     int wcount = 0;
     while (obj->phantomized && !obj->phantomization_complete) {
@@ -343,7 +311,6 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
     obj->phantomized = false;
     list_new(&rebuild);
     HASHTABLE_FOREACH(entry, obj->links, { list_add(rebuild, entry); });
-    HERE_PREFIX_MSG("post-rebuild:", object_to_string(obj));
   } else if (obj->count[bit_flip(obj->which)] > 0) {
     assert(false);
   }
@@ -372,7 +339,6 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
 void object_clean_node(Object *obj, struct collector_t *c) {
   bool die = false;
   locker_start1(obj);
-  HERE_PREFIX_MSG("on clean-up ", object_to_string(obj));
   assert(obj->count[0] >= 0);
   assert(obj->count[1] >= 0);
   if (obj->count[0] == 0 && obj->count[1] == 0) {
@@ -449,33 +415,33 @@ bool object_merge_collectors(Object *const obj, Object *target) {
   }
 }
 
-char *object_to_string(Object *obj) {
-  locker_start1(obj);
-  //sprintf(objstr,"#<Object:%p id:%d count:[%d,%d,%d] which:%d collector_id:%d links:%zu deleted:%s marked:%s phantomized:%s>", //|%s",
-  //        (void*)obj, obj->id, obj->count[0], obj->count[1], obj->count[2],
-  //       obj->which, cid, hashtable_size(obj->links),
-  //        (obj->deleted ? "true" : "false"), (obj->mark ? "true" : "false"),
-  //        (obj->phantomized ? "yes" : "no")); //obj->links->keys());
-  char links[200] = "[";
-  if (hashtable_size(obj->links) > 0) {
-    HASHTABLE_FOREACH(e, obj->links, {
-      strcat(links, (char *) e->key);
-      strcat(links, " ");
-    });
-    links[strlen(links)-1] = ']';
-  } else {
-    strcat(links, "]");
-  }
-  debug_snprintf(objstr, OBJSTRLEN, "{%d#[%d,%d,%d][%d] c:%d d=%s%s p=%s l=%s}",
-                 obj->id, obj->count[0], obj->count[1], obj->count[2],
-                 obj->which,
-                 (obj->collector == NULL ? -1 : (int)obj->collector->id),
-                 (obj->deleted ? "X" : "O"),
-                 (obj->mark ? "X" : "O"), (obj->phantomized ? "yes" : "no"),
-                 links);
-  locker_end();
-  return objstr;
-}
+//char *object_to_string(Object *obj) {
+//  locker_start1(obj);
+//  //sprintf(objstr,"#<Object:%p id:%d count:[%d,%d,%d] which:%d collector_id:%d links:%zu deleted:%s marked:%s phantomized:%s>", //|%s",
+//  //        (void*)obj, obj->id, obj->count[0], obj->count[1], obj->count[2],
+//  //       obj->which, cid, hashtable_size(obj->links),
+//  //        (obj->deleted ? "true" : "false"), (obj->mark ? "true" : "false"),
+//  //        (obj->phantomized ? "yes" : "no")); //obj->links->keys());
+//  char links[200] = "[";
+//  if (hashtable_size(obj->links) > 0) {
+//    HASHTABLE_FOREACH(e, obj->links, {
+//      strcat(links, (char *) e->key);
+//      strcat(links, " ");
+//    });
+//    links[strlen(links)-1] = ']';
+//  } else {
+//    strcat(links, "]");
+//  }
+//  snprintf(objstr, OBJSTRLEN, "{%d#[%d,%d,%d][%d] c:%d d=%s%s p=%s l=%s}",
+//           obj->id, obj->count[0], obj->count[1], obj->count[2],
+//           obj->which,
+//           (obj->collector == NULL ? -1 : (int)obj->collector->id),
+//           (obj->deleted ? "X" : "O"),
+//           (obj->mark ? "X" : "O"), (obj->phantomized ? "yes" : "no"),
+//           links);
+//  locker_end();
+//  return objstr;
+//}
 
 Object *object_get(Object *obj, char *field) {
   Object *retval = NULL;
@@ -511,8 +477,6 @@ void object_set(Object *obj, char *field, Object *referent) {
     return;
   }
 
-  HERE_MSG(object_to_string(obj));
-
   link_t *lk = link_create(obj);
   hashtable_add(obj->links, field, lk);
   lk->target = referent;
@@ -534,7 +498,6 @@ void object_set(Object *obj, char *field, Object *referent) {
     lk->which = bit_flip(referent->which);
     lk->target->count[lk->which]++;
   }
-  HERE_MSG(object_to_string(obj));
   locker_end();
   if (old_link != NULL) link_dec(old_link, false);
 }
@@ -564,15 +527,10 @@ void object_status() {
       }
 
       if (!obj->deleted) live++;
-      HERE_MSG(object_to_string(obj));
       locker_end();
     });
   }
   hashset_destroy(copy);
-
-  debug_snprintf(objstr, OBJSTRLEN, "live=%d", live);
-  HERE_MSG(objstr);
-
   objectslive = live;
 }
 

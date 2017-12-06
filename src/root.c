@@ -1,5 +1,4 @@
 #include "../lib/collectc/include/list.h"
-#include "here.h"
 #include "locker.h"
 #include "root.h"
 
@@ -52,7 +51,6 @@ void root_set(root_t *root, Object *obj) {
 }
 
 void root_free(root_t *root) {
-  HERE();
   root_set(root, NULL);
   free(root);
 }

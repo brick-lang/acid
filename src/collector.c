@@ -6,11 +6,8 @@
 #include "idbaseobject.h"
 #include "here.h"
 
-#define COLLSTRLEN 200
-char collstr[COLLSTRLEN+1];
-
 collector_t *collector_create() {
-  collector_t *collector = (collector_t *) malloc(sizeof(collector_t));
+  collector_t *collector = malloc(sizeof(collector_t));
   idbaseobject_init((IdBaseObject *) collector);
   collector->terminated = false;
   collector->forward = NULL;
@@ -21,9 +18,7 @@ collector_t *collector_create() {
   *(safelist_t **) &collector->rebuild_list = safelist_create(collector->count);
   *(safelist_t **) &collector->clean_list = safelist_create(collector->count);
 
-  HERE();
   *(complock_t **) &collector->lock = complock_create(PRIORITY_COLLECTOR, collector->id);
-  HERE();
 
   return collector;
 }
@@ -71,13 +66,13 @@ void collector_set_forward(collector_t *collector, collector_t *f) {
   locker_end();
 }
 
-char *collector_to_string(collector_t *collector) {
-  debug_snprintf(collstr, COLLSTRLEN, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
-          (void*)collector, collector->id, safelist_size(collector->collect),
-          safelist_size(collector->merged_list),
-          (collector->forward == NULL ? -1 : (int)collector->forward->id));
-  return (char*)collstr;
-}
+//char *collector_to_string(collector_t *collector) {
+//  snprintf(collstr, COLLSTRLEN, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
+//          (void*)collector, collector->id, safelist_size(collector->collect),
+//          safelist_size(collector->merged_list),
+//          (collector->forward == NULL ? -1 : (int)collector->forward->id));
+//  return (char*)collstr;
+//}
 
 void collector_add_object(collector_t *collector, Object *obj) {
   collector_t *add_to = collector;
@@ -108,7 +103,7 @@ bool __collector_request_delete_xthread_run(Object *obj) {
 }
 
 void collector_request_delete(Object *const obj) {
-  xthread_t *xthrd = (xthread_t*)malloc(sizeof(xthread_t));
+  xthread_t *xthrd = malloc(sizeof(xthread_t));
   xthrd->run = (bool (*)(void *)) __collector_request_delete_xthread_run;
   xthrd->runarg = obj;
   xthread_start(xthrd);
@@ -155,28 +150,17 @@ bool collector_run(collector_t* collector) {
     object_clean_node(obj, collector);
   }
 
-  debug_snprintf(collstr, COLLSTRLEN, "Done one cycle %s m=%zu,rc=%zu,cl=%zu,co=%zu,r=%zu",
-          counter_to_string(collector->count),
-          safelist_size(collector->merged_list),
-          safelist_size(collector->recovery_list),
-          safelist_size(collector->clean_list),
-          safelist_size(collector->collect),
-          safelist_size(collector->rebuild_list));
-  HERE_MSG(collstr);
-
   locker_start2(collector, collector->forward);
   bool done = counter_done(collector->count);
   if (done) {
     collector_terminate(collector);
     locker_end(); // release the collector->lock *before* destruction
-    HERE_PREFIX_MSG("Terminated ", collector_to_string(collector));
     collector_destroy(collector);
     return false;
   }
   locker_end();
 
   // catch exception, log handling, stack trace, etc. in orig file here.
-  HERE_PREFIX_MSG("Terminated ", collector_to_string(collector));
   return true;
 }
 
@@ -198,8 +182,6 @@ void collector_forward_safelists_to(collector_t *collector, collector_t *s) {
 
 void collector_merge(collector_t *collector, collector_t *s) {
   locker_start2(collector, s);
-  HERE_PREFIX_MSG("S=", collector_to_string(s));
-  HERE_PREFIX_MSG("T=", collector_to_string(collector));
   collector_forward_safelists_to(s, collector);
   collector_set_forward(s,collector);
   locker_end();

@@ -8,7 +8,17 @@
 #include "locker.h"
 #include "lockable.h"
 
-_Thread_local locker_t *current_locks = NULL;
+static _Thread_local locker_t *current_locks = NULL;
+
+void locker_setup() {
+  assert(current_locks == NULL);
+  current_locks = locker_create();
+}
+
+void locker_teardown() {
+  assert(current_locks != NULL);
+  locker_destroy(current_locks);
+}
 
 locker_t *locker_create() {
   locker_t *locker = malloc(sizeof(locker_t));
@@ -31,10 +41,7 @@ void locker_destroy(locker_t *locker) {
  */
 void locker_start(int locks_count, void *locks[]) {
   locker_t *lk = current_locks;
-  if (lk == NULL) {
-    lk = locker_create();
-    current_locks = lk;
-  }
+  assert(lk != NULL);
 
   // Determine the maximum priority of existing locks
   // All new locks must have lower priority than maxPriority.
@@ -112,6 +119,8 @@ void locker_start4(void *lock1, void *lock2, void *lock3, void *lock4) {
  */
 void locker_end() {
   locker_t *lk = current_locks;
+  assert(lk != NULL);
+
   TreeSet *locks = NULL;
   list_remove_last(lk->stack, (void **) &locks); // pop off the stack;
 

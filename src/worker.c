@@ -16,7 +16,6 @@ static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t worker_synchro_mutex;
 static List *work; // List<task_t>
 static volatile bool endtime = false;
-extern _Thread_local locker_t* current_locks;
 
 void workers_setup() {
   list_new(&work);
@@ -52,19 +51,16 @@ task_t *worker_get() {
 }
 
 int worker_run(void*_) {
-  while(true) {
+  locker_setup();
+  while (!endtime) {
     task_t *task = worker_get();
     if (task != NULL) {
       task_run(task);
     }
-
-    // time for cleanup
-    if (endtime) {
-      // destroy the thread-local locker (if it exists)
-      if (current_locks != NULL) locker_destroy(current_locks);
-      return 0;
-    }
   }
+  // destroy the thread-local locker (if it exists)
+  locker_teardown();
+  return 0;
 }
 
 void worker_add(task_t *task) {

@@ -18,7 +18,8 @@ typedef struct locker_t {
   List *stack;
 } locker_t;
 
-void thread_locker_init();
+void locker_setup();
+void locker_teardown();
 locker_t *locker_create();
 void locker_destroy(locker_t *);
 void locker_start(int locks_count, void *locks[]);

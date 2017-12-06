@@ -15,6 +15,7 @@ void mark_and_sweep();
 
 void world_init() {
   list_new(&keylist);
+  locker_setup();
   root_setup();
   object_system_setup();
   task_setup();
@@ -24,6 +25,7 @@ void world_init() {
 void world_teardown() {
   workers_teardown();
   task_teardown();
+  locker_teardown();
   list_destroy_cb(keylist, free);
 }
 

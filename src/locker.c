@@ -34,6 +34,17 @@ void locker_destroy(locker_t *locker) {
   free(locker);
 }
 
+static size_t remove_duplicate_complocks(complock_t **nums, size_t count) {
+  if (count == 0) return 0;
+  size_t r = 0;
+  for (size_t i = 1; i < count; i++) {
+    if (complock_compare(nums[r], nums[i]) != 0) {
+      nums[++r] = nums[i]; // copy-in next unique number
+    }
+  }
+  return r + 1;
+}
+
 /**
  * Sort locks and lock them
  * @param locks_count the number of locks passed in
@@ -55,26 +66,23 @@ void locker_start(int locks_count, void *locks[]) {
     })
   }
 
-  // Sort the current set of locks
-  TreeSet *tlocks = NULL; // TreeSet<complock_t>
-  treeset_new((int (*)(const void *, const void *)) complock_compare, &tlocks);
+  // Sort the current set of lockables and extract the complocks
+  complock_t* filtered_locks[locks_count];
+  size_t filtered_locks_count = 0;
   for (int i = 0; i < locks_count; i++) {
-    if (locks[i] != NULL) {
-      lockable_t *lock = locks[i];
-      if (lock->cmplock != NULL) {
-        treeset_add(tlocks, lock->cmplock);
-      }
+    if (locks[i] != NULL) { // remove any nulls
+      filtered_locks[filtered_locks_count++] = ((lockable_t *)locks[i])->cmplock;
     }
   }
+  qsort(filtered_locks, filtered_locks_count, sizeof(complock_t*), complock_compare);
+  filtered_locks_count = remove_duplicate_complocks(filtered_locks, filtered_locks_count);
 
   TreeSet *new_locks = NULL; // TreeSet<complock_t>
-  treeset_new((int (*)(const void *, const void *)) complock_compare, &new_locks);
+  treeset_new(complock_compare, &new_locks);
   list_add_last(lk->stack, new_locks);
 
-  TreeSetIter treeSetIter;
-  treeset_iter_init(&treeSetIter, tlocks);
-  complock_t *lock;
-  while (treeset_iter_next(&treeSetIter, (void **) &lock) != CC_ITER_END) {
+  for (int i = 0; i < filtered_locks_count; i++) {
+    complock_t *lock = filtered_locks[i];
     if (treetable_contains_key(lk->locks, lock)) {
       size_t count;
       treetable_get(lk->locks, lock, (void **) &count);
@@ -90,7 +98,6 @@ void locker_start(int locks_count, void *locks[]) {
       abort();
     }
   }
-  treeset_destroy(tlocks);
 }
 
 void locker_start1(void *lock) {

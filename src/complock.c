@@ -16,7 +16,9 @@ complock_t* complock_create(priority_t priority, unsigned int id) {
 
 inline void complock_destroy(complock_t *c) { free(c); }
 
-int complock_compare(complock_t *lock1, complock_t* lock2) {
+int complock_compare(const void*c1, const void* c2) {
+  const complock_t *lock1 = c1;
+  const complock_t *lock2 = c2;
   if (lock1->priority < lock2->priority)
     return -1;
   else if (lock1->priority > lock2->priority)

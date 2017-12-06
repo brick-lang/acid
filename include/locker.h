@@ -1,5 +1,4 @@
 #include "../lib/collectc/include/treetable.h"
-#include "../lib/collectc/include/treeset.h"
 #include "../lib/collectc/include/list.h"
 #ifndef LOCKER_H
 #define LOCKER_H
@@ -14,15 +13,14 @@ extern "C" {
  * more locks if (1) it doesn't have any yet, or (2) the new locks
  * have lower "priority" than any locks already obtained. */
 typedef struct locker_t {
-  TreeTable *locks;  // A TreeMap of complock_t to int
-  List *stack;
+  TreeTable *locks;  // TreeMap<complock_t*,int>
+  List *stack;       // List<locker_entry_t*>
 } locker_t;
 
 void locker_setup();
 void locker_teardown();
 locker_t *locker_create();
 void locker_destroy(locker_t *);
-void locker_start(int locks_count, void *locks[]);
 void locker_start1(void *lock);
 void locker_start2(void *lock1, void *lock2);
 void locker_start3(void *lock1, void *lock2, void *lock3);

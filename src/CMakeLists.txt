@@ -6,7 +6,7 @@ add_library( brandtgc
   counter.c
   locker.c
   link.c
-  object.c collector.c safelist.c xthread.c root.c worker.c)
+  object.c collector.c safelist.c task.c root.c worker.c)
 
 target_link_libraries(brandtgc collectc tinycthread ${CMAKE_THREAD_LIBS_INIT})
 if(UNIX)

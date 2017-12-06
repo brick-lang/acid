@@ -17,13 +17,13 @@ void world_init() {
   list_new(&keylist);
   root_setup();
   object_system_setup();
-  xthread_setup();
+  task_setup();
   workers_setup();
 }
 
 void world_teardown() {
   workers_teardown();
-  xthread_teardown();
+  task_teardown();
   list_destroy_cb(keylist, free);
 }
 
@@ -90,7 +90,7 @@ void wheel() {
     root_set(wheel, o);
     locker_end();
   }
-  xthread_wait_for_zero_threads();
+  task_wait_for_zero_threads();
   mark_and_sweep();
   for (int i = 0; i < 300; i++) {
     locker_start1(wheel->ref);
@@ -231,13 +231,13 @@ void benzene_ring_scalability(int size) {
   }
 
   printf("Benzene x%d constructed.\n", n);
-  xthread_wait_for_zero_threads();
+  task_wait_for_zero_threads();
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
 
   for (int i = 0; i < n; ++i ){
     root_free(a[i][0]);
   }
-  xthread_wait_for_zero_threads();
+  task_wait_for_zero_threads();
   clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
   printf("Collection time=%lf\n", 0.001*(end-start));
 }
@@ -410,7 +410,7 @@ void mark_and_sweep(){
 }
 
 void status() {
-  xthread_wait_for_zero_threads();
+  task_wait_for_zero_threads();
   object_status();
   mark_and_sweep();
 }

@@ -76,10 +76,10 @@ void object_dec(Object *obj, bit_t w) {
         collector_add_object(obj->collector, obj);
 
         // create and start a new collection task
-        xthread_t *xthrd = xthread_create();
-        xthrd->run = (bool (*)(void *)) collector_run;
-        xthrd->runarg = obj->collector;
-        xthread_start(xthrd);
+        task_t *task = task_create();
+        task->run = (bool (*)(void *)) collector_run;
+        task->runarg = obj->collector;
+        task_start(task);
       } else {
         collector_add_object(obj->collector, obj);
       }

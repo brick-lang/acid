@@ -14,7 +14,7 @@
 
 static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t worker_synchro_mutex;
-static List *work; // List<xthread_t>
+static List *work; // List<task_t>
 static volatile bool endtime = false;
 extern _Thread_local locker_t* current_locks;
 
@@ -39,8 +39,8 @@ void workers_teardown() {
   mtx_destroy(&worker_synchro_mutex);
 }
 
-xthread_t *worker_get() {
-  xthread_t *retval;
+task_t *worker_get() {
+  task_t *retval;
   mtx_lock(&worker_synchro_mutex);
   if (list_size(work) == 0) {
     retval = NULL;
@@ -53,9 +53,9 @@ xthread_t *worker_get() {
 
 int worker_run(void*_) {
   while(true) {
-    xthread_t *xthread = worker_get();
-    if (xthread != NULL) {
-      xthread_run(xthread);
+    task_t *task = worker_get();
+    if (task != NULL) {
+      task_run(task);
     }
 
     // time for cleanup
@@ -67,9 +67,9 @@ int worker_run(void*_) {
   }
 }
 
-void worker_add(xthread_t *xthrd) {
+void worker_add(task_t *task) {
   mtx_lock(&worker_synchro_mutex);
-  list_add_last(work, xthrd);
+  list_add_last(work, task);
   mtx_unlock(&worker_synchro_mutex);
 }
 

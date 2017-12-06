@@ -9,13 +9,13 @@
 #include <assert.h>
 #include "locker.h"
 #include "wrappedlock.h"
-#include "xthread.h"
+#include "task.h"
 #include "worker.h"
 
 static wrappedlock_t *lock = NULL;
 static volatile int count = 0;
 
-void xthread_setup() {
+void task_setup() {
   assert(lock == NULL);
   //lock = wrappedlock_create(PRIORITY_LIST);
   lock = malloc(sizeof(wrappedlock_t));
@@ -23,29 +23,29 @@ void xthread_setup() {
   cnd_init(&lock->cond);
 }
 
-void xthread_teardown() {
+void task_teardown() {
   wrappedlock_destroy(lock);
 }
 
-xthread_t *xthread_create(){
-  xthread_t *xthread = malloc(sizeof(xthread_t));
-  xthread->run = NULL;
-  xthread->runarg = NULL;
-  return xthread;
+task_t *task_create(){
+  task_t *task = malloc(sizeof(task_t));
+  task->run = NULL;
+  task->runarg = NULL;
+  return task;
 }
 
-void xthread_destroy(xthread_t *xthrd) {
-  free(xthrd);
+void task_destroy(task_t *task) {
+  free(task);
 }
 
-void xthread_start(xthread_t* xthrd) {
+void task_start(task_t* task) {
   locker_start1(lock);
   count++;
   locker_end();
-  worker_add(xthrd);
+  worker_add(task);
 }
 
-int xthread_get_thread_count() {
+int task_get_thread_count() {
   int retval;
   locker_start1(lock);
   retval = count;
@@ -53,7 +53,7 @@ int xthread_get_thread_count() {
   return retval;
 }
 
-bool xthread_wait_for_zero_threads() {
+bool task_wait_for_zero_threads() {
   bool retval;
   locker_start1(lock);
   if (count > 0) {
@@ -64,13 +64,13 @@ bool xthread_wait_for_zero_threads() {
   return retval;
 }
 
-void xthread_run(xthread_t *xthrd) {
-  bool again = xthrd->run(xthrd->runarg);
+void task_run(task_t *task) {
+  bool again = task->run(task->runarg);
   // TODO: Error handle here (stack trace, etc.)
   if (again) {
-    worker_add(xthrd);
+    worker_add(task);
   } else {
-    xthread_destroy(xthrd);
+    task_destroy(task);
     locker_start1(lock);
     count--;
     if(count == 0) {

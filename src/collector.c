@@ -97,16 +97,16 @@ void collector_add_object(collector_t *collector, Object *obj) {
   }
 }
 
-bool __collector_request_delete_xthread_run(Object *obj) {
+bool __collector_request_delete_task_run(Object *obj) {
   object_die(obj);
   return false; // Don't run this operation again.
 }
 
 void collector_request_delete(Object *const obj) {
-  xthread_t *xthrd = malloc(sizeof(xthread_t));
-  xthrd->run = (bool (*)(void *)) __collector_request_delete_xthread_run;
-  xthrd->runarg = obj;
-  xthread_start(xthrd);
+  task_t *task = malloc(sizeof(task_t));
+  task->run = (bool (*)(void *)) __collector_request_delete_task_run;
+  task->runarg = obj;
+  task_start(task);
 }
 
 bool collector_run(collector_t* collector) {

@@ -3,7 +3,7 @@
 #include "counter.h"
 #include "object.h"
 #include "safelist.h"
-#include "xthread.h"
+#include "task.h"
 
 #ifndef COLLECTOR_H
 #define COLLECTOR_H

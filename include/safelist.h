@@ -1,4 +1,4 @@
-#include "../lib/collectc/include/array.h"
+#include "../lib/collectc/include/list.h"
 #include "wrappedlock.h"
 #include "counter.h"
 
@@ -15,7 +15,7 @@ extern "C" {
 typedef struct safelist_t {
   wrappedlock_t *const lock;
   counter_t *const count;
-  Array *const data; // Array<Object>
+  List *const data; // List<Object>
   struct safelist_t *_forward;
 } safelist_t;
 

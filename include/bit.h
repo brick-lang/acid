@@ -13,7 +13,6 @@ extern "C" {
 typedef enum { BIT_ZERO = 0, BIT_ONE = 1 } bit_t;
 
 bit_t bit_flip(bit_t b);
-bit_t bit_value_of(int n);
 
 #ifdef __cplusplus
 }

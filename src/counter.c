@@ -54,7 +54,7 @@ void counter_dec_store(counter_t *counter) {
 }
 
 char *counter_to_string(counter_t *counter) {
-  snprintf(countstr, COUNTSTRLEN, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
+  debug_snprintf(countstr, COUNTSTRLEN, "COUNT: store=%d / ref=%d", counter->store_count, counter->ref_count);
   return countstr;
 }
 

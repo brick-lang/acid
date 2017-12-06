@@ -37,8 +37,10 @@ void root_alloc(root_t *root) {
  */
 void root_set(root_t *root, Object *obj) {
   locker_start2(obj, root->ref);
-  if (obj != NULL) object_inc_strong(obj);
-  if (root->ref != NULL) object_dec_strong(root->ref);
+  if (obj != NULL)
+    object_inc_strong(obj);
+  if (root->ref != NULL)
+    object_dec_strong(root->ref);
 
   mtx_lock(&root_synchro_mutex);
   list_remove(roots, root->ref, NULL);

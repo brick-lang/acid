@@ -27,7 +27,7 @@ link_t *link_create(Object *s) {
  * @param link the link to destroy
  */
 void link_destroy(link_t *link) {
-  snprintf(linkstr, LINKSTRLEN, "before: #<Object:%p id:%d> => #<Object:%p id:%d>",
+  debug_snprintf(linkstr, LINKSTRLEN, "before: #<Object:%p id:%d> => #<Object:%p id:%d>",
           (void*)link->src, link->src->id, (void*)link->target, link->target->id);
   HERE_MSG(linkstr);
 
@@ -37,7 +37,7 @@ void link_destroy(link_t *link) {
   if (!target_null) {
     link_dec(link, false);
 
-    snprintf(linkstr, LINKSTRLEN, "after: %s", object_to_string(link->target));
+    debug_snprintf(linkstr, LINKSTRLEN, "after: %s", object_to_string(link->target));
     HERE_MSG(linkstr);
   }
   free(link);

@@ -72,7 +72,7 @@ void collector_set_forward(collector_t *collector, collector_t *f) {
 }
 
 char *collector_to_string(collector_t *collector) {
-  snprintf(collstr, COLLSTRLEN, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
+  debug_snprintf(collstr, COLLSTRLEN, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
           (void*)collector, collector->id, safelist_size(collector->collect),
           safelist_size(collector->merged_list),
           (collector->forward == NULL ? -1 : (int)collector->forward->id));
@@ -155,7 +155,7 @@ bool collector_run(collector_t* collector) {
     object_clean_node(obj, collector);
   }
 
-  snprintf(collstr, COLLSTRLEN, "Done one cycle %s m=%zu,rc=%zu,cl=%zu,co=%zu,r=%zu",
+  debug_snprintf(collstr, COLLSTRLEN, "Done one cycle %s m=%zu,rc=%zu,cl=%zu,co=%zu,r=%zu",
           counter_to_string(collector->count),
           safelist_size(collector->merged_list),
           safelist_size(collector->recovery_list),

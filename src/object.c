@@ -119,9 +119,6 @@ void object_dec_strong(Object *obj) {
 //#ifdef DEBUG
 void object_del(Object *obj) {
   locker_start1(obj);
-//  if (obj->deleted && obj->where != NULL) {
-//    where.printStackTrace();
-//  }
   assert(!obj->deleted);
   obj->deleted = true;
   object_set_collector(obj, NULL);
@@ -163,7 +160,7 @@ void object_die(Object *obj) {
   }
   locker_end();
 
-  snprintf(objstr, OBJSTRLEN, "die=%zu", list_size(lks));
+  debug_snprintf(objstr, OBJSTRLEN, "die=%zu", list_size(lks));
   HERE_MSG(objstr);
 
   LIST_FOREACH(lk, lks, { link_destroy(lk); });
@@ -228,14 +225,14 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   locker_end();
 
   HERE_MSG(object_to_string(obj));
-  snprintf(objstr, OBJSTRLEN, "phantomize=%s/%s => #<Object:%p id:%d>/%zu",
+  debug_snprintf(objstr, OBJSTRLEN, "phantomize=%s/%s => #<Object:%p id:%d>/%zu",
           (phantomize ? "true" : "false"),
           (obj->phantomized ? "true" : "false"),
           (void*)obj, obj->id, list_size(phantoms));
   HERE_MSG(objstr);
 
   if (phantomize) {
-    snprintf(objstr, OBJSTRLEN, "%zu", list_size(phantoms));
+    debug_snprintf(objstr, OBJSTRLEN, "%zu", list_size(phantoms));
     HERE_MSG(objstr);
 
     // Between here and the following syncs
@@ -369,6 +366,7 @@ void object_recover_node(Object *obj, safelist_t *rebuildNext, collector_t *cptr
     assert(obj->collector == NULL);
   }
   locker_end();
+  if (rebuild != NULL) list_destroy(rebuild);
 }
 
 void object_clean_node(Object *obj, struct collector_t *c) {
@@ -447,22 +445,34 @@ bool object_merge_collectors(Object *const obj, Object *target) {
       assert(t != NULL);
       return true;
     }
+    locker_end();
   }
 }
 
 char *object_to_string(Object *obj) {
   locker_start1(obj);
-  int cid = obj->collector == NULL ? -1 : (int)obj->collector->id;
   //sprintf(objstr,"#<Object:%p id:%d count:[%d,%d,%d] which:%d collector_id:%d links:%zu deleted:%s marked:%s phantomized:%s>", //|%s",
   //        (void*)obj, obj->id, obj->count[0], obj->count[1], obj->count[2],
   //       obj->which, cid, hashtable_size(obj->links),
   //        (obj->deleted ? "true" : "false"), (obj->mark ? "true" : "false"),
   //        (obj->phantomized ? "yes" : "no")); //obj->links->keys());
-  snprintf(objstr, OBJSTRLEN, "{%d#[%d,%d,%d][%d] c:%d d=%s%s p=%s l=%zu}",
-          obj->id, obj->count[0], obj->count[1], obj->count[2],
-          obj->which, cid, (obj->deleted ? "X" : "O"),
-          (obj->mark ? "X" : "O"), (obj->phantomized ? "yes" : "no"),
-          hashtable_size(obj->links));
+  char links[200] = "[";
+  if (hashtable_size(obj->links) > 0) {
+    HASHTABLE_FOREACH(e, obj->links, {
+      strcat(links, (char *) e->key);
+      strcat(links, " ");
+    });
+    links[strlen(links)-1] = ']';
+  } else {
+    strcat(links, "]");
+  }
+  debug_snprintf(objstr, OBJSTRLEN, "{%d#[%d,%d,%d][%d] c:%d d=%s%s p=%s l=%s}",
+                 obj->id, obj->count[0], obj->count[1], obj->count[2],
+                 obj->which,
+                 (obj->collector == NULL ? -1 : (int)obj->collector->id),
+                 (obj->deleted ? "X" : "O"),
+                 (obj->mark ? "X" : "O"), (obj->phantomized ? "yes" : "no"),
+                 links);
   locker_end();
   return objstr;
 }
@@ -472,7 +482,7 @@ Object *object_get(Object *obj, char *field) {
 
   locker_start1(obj);
   assert(!obj->deleted);
-  link_t *lk;
+  link_t *lk = NULL;
   hashtable_get(obj->links, field, (void **) &lk);
   if (lk != NULL) retval = lk->target;
   locker_end();
@@ -560,7 +570,7 @@ void object_status() {
   }
   hashset_destroy(copy);
 
-  snprintf(objstr, OBJSTRLEN, "live=%d", live);
+  debug_snprintf(objstr, OBJSTRLEN, "live=%d", live);
   HERE_MSG(objstr);
 
   objectslive = live;

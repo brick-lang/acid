@@ -9,14 +9,6 @@ describe bit_spec("Bit tests", $ {
   it("BIT_ONE flips to BIT_ZERO",_ {
     expect(bit_flip(BIT_ONE)).to_equal(BIT_ZERO);
   });
-
-  it("0's value to be BIT_ZERO",_ {
-    expect(bit_value_of(0)).to_equal(BIT_ZERO);
-  });
-
-  it("1's value to be BIT_ONE",_ {
-    expect(bit_value_of(1)).to_equal(BIT_ONE);
-  });
 });
 
 int main() {

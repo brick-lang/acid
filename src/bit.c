@@ -12,23 +12,6 @@ bit_t bit_flip(bit_t b) {
       return BIT_ZERO;
     default:
       printf("Fatal error: Bit.flip of non-bit");
-      exit(-1);
-  }
-}
-
-/**
- * Converts an integer to a bit_t
- * @param n the integer to convert
- * @return the resulting bit_t
- */
-bit_t bit_value_of(int n) {
-  switch (n) {
-    case 0:
-      return BIT_ZERO;
-    case 1:
-      return BIT_ONE;
-    default:
-      printf("Fatal error: Bit.value_of of non-i1:%d", n);
-      exit(-1);
+      abort();
   }
 }

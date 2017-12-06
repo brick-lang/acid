@@ -1,20 +1,24 @@
 #define DEBUG
-#include <here.h>
-#include <link.h>
 #include <assert.h>
-#include <locker.h>
 #include "../lib/collectc/include/list.h"
 #include "../lib/collectc/include/deque.h"
+#include "../lib/collectc/include/hashset.h"
+#include "here.h"
 #include "worker.h"
 #include "root.h"
-#include "../lib/collectc/include/hashset.h"
+#include "locker.h"
+#include "link.h"
+
 
 #define DEBUGSTRLEN 300
 char debugstr[DEBUGSTRLEN+1];
 
+static List* keylist = NULL;
+
 void mark_and_sweep();
 
 void world_init() {
+  list_new(&keylist);
   root_setup();
   object_system_setup();
   xthread_setup();
@@ -24,6 +28,7 @@ void world_init() {
 void world_teardown() {
   workers_teardown();
   xthread_teardown();
+  list_destroy_cb(keylist, free);
 }
 
 void simplecycle() {
@@ -37,26 +42,28 @@ void simplecycle() {
   object_set(a->ref, "y", a->ref);
 
 
-  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
   HERE_MSG(debugstr);
 
+#ifdef DEBUG
   Object *pa = a->ref;
   Object *pb = b->ref;
+#endif
 
   root_free(b);
 
-  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
   HERE_MSG(debugstr);
 
   root_free(a);
 
-  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
   HERE_MSG(debugstr);
 }
 
@@ -70,19 +77,21 @@ void simplecycle2() {
   object_set(a->ref, "x", b->ref);
   object_set(b->ref, "x", a->ref);
 
-  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(a->ref));
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(b->ref));
   HERE_MSG(debugstr);
 
+#ifdef DEBUG
   Object *pa = a->ref;
   Object *pb = b->ref;
+#endif
 
   root_free(b);
 
-  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
   HERE_MSG(debugstr);
 
   object_set(a->ref, "y", NULL);
@@ -91,9 +100,9 @@ void simplecycle2() {
 
   root_free(a);
 
-  snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "a = %s", object_to_string(pa));
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
+  debug_snprintf(debugstr, DEBUGSTRLEN, "b = %s", object_to_string(pb));
   HERE_MSG(debugstr);
 }
 
@@ -146,6 +155,240 @@ void wheel() {
   root_free(wheel);
 }
 
+void multi_collect() {
+  root_t *a1 = root_create();
+  root_alloc(a1);
+  root_t *prev = root_create();
+  root_set(prev, a1->ref);
+
+  root_t *x = NULL;
+  const int n = 1;
+  for (int i = 0; i <= n; i++) {
+    x = root_create();
+    root_alloc(x);
+    object_set(prev->ref, "next", x->ref);
+    root_set(prev, x->ref);
+    root_free(x);
+  }
+  HERE_MSG("First chain created");
+
+  root_t *a2 = root_create();
+  root_alloc(a2);
+  root_t *prev2 = root_create();
+  root_set(prev2, a2->ref);
+  const int nt = 1;
+  for (int i = 0; i <= nt; i++) {
+    x = root_create();
+    root_alloc(x);
+    object_set(prev2->ref, "next", x->ref);
+    root_set(prev2, x->ref);
+    root_free(x);
+  }
+  HERE_MSG("Second chain created");
+
+  object_set(prev->ref, "n", a2->ref);
+  object_set(prev2->ref, "m", a1->ref);
+  HERE_MSG("Chains joined");
+
+  root_free(prev);
+  root_free(prev2);
+  root_free(a1);
+  root_free(a2);
+}
+
+root_t *dlink(Object *o, int n) {
+  root_t *a = root_create();
+  root_alloc(a);
+  if (o != NULL) {
+    object_set(o, "next", a->ref); // forward
+    object_set(a->ref, "prev", o); // back
+    if (n == 0) {
+      return a; // base case
+    }
+  }
+  root_t *b = dlink(a->ref, n-1);
+  root_free(a);
+  return b;
+}
+
+void doubly_linked_list() {
+  root_t *dl = dlink(NULL, 30);
+  Object *o = NULL;
+  while (true) {
+    o = object_get(dl->ref, "prev");
+    if (o == NULL) break;
+    root_set(dl, o);
+  }
+  root_free(dl);
+}
+
+void clique() {
+  int n = 9;
+  root_t *a[n];
+  for (int i = 0; i < n; i++) {
+    a[i] = root_create();
+    root_alloc(a[i]);
+  }
+
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (i!=j) {
+        char *key = calloc(7, sizeof(char));
+        snprintf(key, 6, "%dx%d", i+1, j+1);
+        list_add(keylist, key);
+        object_set(a[i]->ref, key, a[j]->ref);
+      }
+    }
+  }
+
+  for (int i = n - 1; i >= 0; i--) {
+    root_free(a[i]);
+  }
+}
+
+void benzene_ring_scalability(int size) {
+  int n = size * 16;
+  root_t *a[n][6];
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      a[i][j] = root_create();
+      root_alloc(a[i][j]);
+    }
+  }
+
+  // create benzene
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      char *key = calloc(5, sizeof(char));
+      snprintf(key, 5, "%d", (j+1)%8);
+      list_add(keylist, key);
+      Object *target = a[i][(j+1)%6]->ref;
+      object_set(a[i][j]->ref, key, target);
+    }
+  }
+
+  for (int i = 0; i < n-1; ++i) {
+    object_set(a[i][1]->ref, "next1", a[i+1][5]->ref);
+  }
+  for (int i = n-1; i > 0; --i) {
+    object_set(a[i][4]->ref, "next2", a[i-1][2]->ref);
+  }
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 1; j < 6; ++j) {
+      root_free(a[i][j]);
+    }
+  }
+
+  HERE_MSG("Benzene finished");
+  xthread_wait_for_zero_threads();
+  clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
+
+  for (int i = 0; i < n; ++i ){
+    root_free(a[i][0]);
+  }
+  xthread_wait_for_zero_threads();
+  clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
+  printf("Time=%lf\n", 0.001*(end-start));
+}
+
+void benzene_ring_ms_test() {
+  int n = 8;
+  
+  root_t *a[n][6];
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      a[i][j] = root_create();
+      root_alloc(a[i][j]);
+    }
+  }
+  
+  // create benzene
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      char *key = calloc(5, sizeof(char));
+      snprintf(key, 5, "%d", (j+1)%8);
+      list_add(keylist, key);
+      Object *target = a[i][(j+1)%6]->ref;
+      object_set(a[i][j]->ref, key, target);
+    }
+  }
+
+  for (int j = n-1; j > 0; --j) {
+    object_set(a[j][4]->ref, "next2", a[j-1][2]->ref);
+  }
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 1; j < 6; ++j) {
+      root_free(a[i][j]);
+    }
+  }
+
+  HERE_MSG("Benzene finished");
+
+  for (int i = 0; i < n; ++i) {
+    root_free(a[i][0]);
+  }
+}
+
+void object_set_test() {
+  int n = 2;
+
+  root_t *a[n][6];
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      a[i][j] = root_create();
+      root_alloc(a[i][j]);
+    }
+  }
+  
+  // create benzene
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      object_set(a[i][j]->ref, "next", a[i][(j+1)%6]->ref);
+    }
+  }
+  
+  // partially free
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 5; ++j) {
+      root_free(a[i][j]);
+    }
+  }
+
+  HERE_MSG("Benzene finished");
+
+  int race_checks = 0;
+  for (int i = 0; i < n; ++i) {
+    bool phantomized = false;
+    locker_start2(a[i][5]->ref, object_get(a[i][5]->ref, "next"));
+    if (object_get(a[i][5]->ref, "next") != NULL &&
+        object_get(a[i][5]->ref, "next")->phantomized) {
+      root_set(a[i][5], object_get(a[i][5]->ref, "next"));
+      race_checks++;
+      phantomized = true;
+    }
+    locker_end();
+
+    if (!phantomized) {
+      int ncount = 0;
+      while(!object_get(a[i][5]->ref, "next")->phantomized) {
+        thrd_sleep(&(struct timespec) {.tv_nsec=1000000}, NULL);
+        if (ncount++ == 10) break;
+      }
+      root_set(a[i][5], object_get(a[i][5]->ref, "next"));
+      race_checks++;
+    }
+  }
+  if (race_checks == n) {
+    for (int i = 1; i < n; ++i) {
+      object_set(a[i][5]->ref, "next1", a[i-1][5]->ref);
+    }
+    for (int i = 0; i < n; ++i) {
+      root_free(a[i][5]);
+    }
+  }
+}
 
 extern List *roots;
 extern HashSet *objects;
@@ -159,7 +402,7 @@ void mark_and_sweep(){
   if (roots == NULL) {
     HERE_MSG("null queue");
   } else {
-    snprintf(debugstr, DEBUGSTRLEN, "size %zu", list_size(roots));
+    debug_snprintf(debugstr, DEBUGSTRLEN, "size %zu", list_size(roots));
     HERE_MSG(debugstr);
   }
 
@@ -207,14 +450,14 @@ void mark_and_sweep(){
   }
   hashset_destroy(copy);
 
-  snprintf(debugstr, DEBUGSTRLEN, "After Mark and Sweep, live = %d", live);
+  debug_snprintf(debugstr, DEBUGSTRLEN, "After Mark and Sweep, live = %d", live);
   HERE_MSG(debugstr);
-  snprintf(debugstr, DEBUGSTRLEN, "live = %d; slive = %d", live, objectslive);
+  debug_snprintf(debugstr, DEBUGSTRLEN, "live = %d; slive = %d", live, objectslive);
   HERE_MSG(debugstr);
   if (live == objectslive) {
-    HERE_MSG(" MS == B");
+    printf(" MS == B\n");
   } else {
-    HERE_MSG(" MS != B");
+    printf(" MS != B\n");
   }
 }
 
@@ -225,17 +468,31 @@ void status() {
 }
 
 int main(int argc, char** argv) {
+  clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
   world_init();
   printf("hello world!\n");
   simplecycle();
   simplecycle2();
   wheel();
-//  multi_collect();
-//  doubly_linked_list;
-//  clique();
-//  benzene_ring_scalability(6);
-//  object_set_test;
+  multi_collect();
+  doubly_linked_list();
+  clique();
+  benzene_ring_scalability(6);
+  benzene_ring_ms_test();
+  object_set_test();
+
+  for (int x = 1; x <= 16; ++x) {
+    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
+    benzene_ring_scalability(x);
+    status();
+    clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
+    snprintf(debugstr, DEBUGSTRLEN, "Time for %d is %lf\n", x, 0.001*end-st);
+    HERE_MSG(debugstr);
+  }
 
   status();
   world_teardown();
+  clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
+  printf("Total time elasped: %lf\n", 0.001*(end-start));
+  exit(0);
 }

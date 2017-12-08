@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <here.h>
 #include "link.h"
 #include "object.h"
 #include "locker.h"
@@ -26,7 +25,7 @@ void link_destroy(link_t *link) {
   bool target_null = (link->target == NULL);
   locker_end();
   if (!target_null) {
-    link_dec(link, false);
+    link_dec(link);
   }
   free(link);
 }
@@ -39,40 +38,16 @@ void link_phantomize(link_t *link) {
     return;
   }
   link->target->count[2]++;
-  link_dec(link, false);
-  // assert link->target->collector != NULL || link->src->collector != NULL
+  link_dec(link);
+  assert(link->target->collector != NULL || link->src->collector != NULL);
   object_merge_collectors(link->src, link->target);
   link->phantomized = true;
   assert(collector_equals(link->target->collector, link->src->collector)); // : "diff1: t="+target.collector+" s="+src.collector;
   locker_end();
 }
 
-void link_dec_phantomizing(link_t* link) {
-  locker_start2((void *) link->target, (void *) link->src);
-  if (link->phantomized) {
-    object_dec_phantom(link->target);
-  } else {
-    int ncount = --link->target->count[link->which];
-    if (ncount == 0 && link->target->count[bit_flip(link->which)] == 0 && link->target->count[2] == 0) {
-      collector_request_delete(link->target);
-      locker_end();
-      return;
-    }
-    assert (link->target->count[link->which] >= 0); // : target.toString()
-    if (ncount == 0 && link->which == link->target->which) {
-      collector_add_object(link->target->collector, link->target);
-    }
-  }
-  locker_end();
-}
-
-void link_dec(link_t* link, bool phantomizing) {
-  if (link->target == NULL) return;
-  if (phantomizing) {
-    link_dec_phantomizing(link);
-    return;
-  }
-  // Pseudo: LinkFree
+// Pseudo: LinkFree
+void link_dec(link_t* link) {
   if (link->target == NULL) return;
 
   locker_start2(link->target, link->src);

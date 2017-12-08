@@ -368,7 +368,7 @@ void mark_and_sweep(){
       obj->mark = true;
       if (hashtable_size(obj->links) > 0) {
         HASHTABLE_FOREACH(l, obj->links, {
-          link_t *li = ((TableEntry*)l)->value;
+          link_t *li = l->value;
           deque_add_last(pqueue, li->target);
         })
       }

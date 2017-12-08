@@ -1,7 +1,5 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
-#include <here.h>
 #include "counter.h"
 #include "locker.h"
 

@@ -1,10 +1,8 @@
 #include <assert.h>
 #include "object.h"
-#include "lockable.h"
 #include "collector.h"
 #include "locker.h"
 #include "idbaseobject.h"
-#include "here.h"
 
 collector_t *collector_create() {
   collector_t *collector = malloc(sizeof(collector_t));
@@ -97,18 +95,6 @@ void collector_add_object(collector_t *collector, Object *obj) {
   }
 }
 
-bool __collector_request_delete_task_run(Object *obj) {
-  object_die(obj);
-  return false; // Don't run this operation again.
-}
-
-void collector_request_delete(Object *const obj) {
-  task_t *task = malloc(sizeof(task_t));
-  task->run = (bool (*)(void *)) __collector_request_delete_task_run;
-  task->runarg = obj;
-  task_start(task);
-}
-
 bool collector_run(collector_t* collector) {
   if (counter_continue_waiting(collector->count)) {
     return true;
@@ -134,20 +120,20 @@ bool collector_run(collector_t* collector) {
   while (true) {
     Object *obj = safelist_poll(collector->recovery_list);
     if (obj == NULL) break;
-    object_recover_node(obj,collector->rebuild_list,collector); // don't need to pass rebuild
+    object_recover_node(obj, collector); // don't need to pass rebuild
     safelist_add(collector->clean_list, obj);
   }
 
   while (true) {
     Object *obj = safelist_poll(collector->rebuild_list);
     if (obj == NULL) break;
-    object_recover_node(obj,collector->rebuild_list,collector);
+    object_recover_node(obj, collector);
   }
 
   while (true) {
     Object *obj = safelist_poll(collector->clean_list);
     if (obj == NULL) break;
-    object_clean_node(obj, collector);
+    object_clean_node(obj);
   }
 
   locker_start2(collector, collector->forward);

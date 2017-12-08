@@ -18,7 +18,7 @@ typedef struct link_t {
 link_t* link_create(struct Object* src);
 void link_destroy(link_t *l);
 void link_phantomize(link_t* l);
-void link_dec(link_t* l, bool phantomizing);
+void link_dec(link_t* l);
 
 #ifdef __cplusplus
 }

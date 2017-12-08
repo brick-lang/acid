@@ -10,7 +10,7 @@
 #include "worker.h"
 #include "locker.h"
 
-#define NUM_WORKERS 1
+#define NUM_WORKERS 8
 
 static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t worker_synchro_mutex;
@@ -50,7 +50,7 @@ task_t *worker_get() {
   return retval;
 }
 
-int worker_run(void*_) {
+int worker_run(__attribute__((__unused__)) void* _) {
   locker_setup();
   while (!endtime) {
     task_t *task = worker_get();

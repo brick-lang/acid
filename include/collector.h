@@ -31,7 +31,7 @@ void collector_check_not_terminated(collector_t *collector);
 void collector_set_forward(collector_t* collector, collector_t *f);
 //char* collector_to_string(collector_t* collector);
 void collector_add_object(collector_t* add_to, Object *o);
-bool collector_run(collector_t *collector);
+bool collector_run(void *collector);
 void collector_merge(collector_t* collector, collector_t *s);
 bool collector_equals(collector_t *c1, collector_t *c2);
 collector_t* collector_update(collector_t *collector);

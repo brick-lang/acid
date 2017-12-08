@@ -2,15 +2,6 @@
 #include "locker.h"
 #include "root.h"
 
-static mtx_t root_synchro_mutex;
-
-List *roots;
-
-void root_setup() {
-  mtx_init(&root_synchro_mutex, mtx_plain | mtx_recursive);
-  list_new(&roots);
-}
-
 root_t *root_create(){
   root_t *root = malloc(sizeof(root));
   root->ref = NULL;
@@ -23,10 +14,6 @@ void root_alloc(root_t *root) {
   }
   root->ref = object_create();
   object_inc_strong(root->ref);
-
-  mtx_lock(&root_synchro_mutex);
-  list_add(roots, root->ref);
-  mtx_unlock(&root_synchro_mutex);
 }
 
 /**
@@ -40,11 +27,6 @@ void root_set(root_t *root, Object *obj) {
     object_inc_strong(obj);
   if (root->ref != NULL)
     object_dec_strong(root->ref);
-
-  mtx_lock(&root_synchro_mutex);
-  list_remove(roots, root->ref, NULL);
-  if (obj != NULL) list_add(roots, obj);
-  mtx_unlock(&root_synchro_mutex);
 
   root->ref = obj;
   locker_end();

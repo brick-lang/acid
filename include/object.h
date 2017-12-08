@@ -19,13 +19,10 @@ typedef struct Object {
   bool deleted;
   volatile int count[3];
   struct collector_t *collector;
-  volatile bool mark;
   bool phantomization_complete;
 } Object;
 
-void object_system_setup();
 Object *object_create();
-int object_live();
 Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
 //char *object_to_string(Object *obj);
@@ -38,7 +35,6 @@ void object_dec_strong(Object *obj);
 void object_clean_node(Object *obj);
 bool object_merge_collectors(Object *obj, Object *target);
 void object_set_collector(Object *obj, struct collector_t *c);
-void object_status();
 
 #ifdef __cplusplus
 }

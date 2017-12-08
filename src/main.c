@@ -1,23 +1,17 @@
 #define DEBUG
 #include <assert.h>
+#include <stdatomic.h>
 #include "../lib/collectc/include/list.h"
-#include "../lib/collectc/include/deque.h"
-#include "../lib/collectc/include/hashset.h"
 #include "here.h"
 #include "worker.h"
 #include "root.h"
 #include "locker.h"
-#include "link.h"
 
 static List* keylist = NULL;
-
-void mark_and_sweep();
 
 void world_init() {
   list_new(&keylist);
   locker_setup();
-  root_setup();
-  object_system_setup();
   task_setup();
   workers_setup();
 }
@@ -93,7 +87,6 @@ void wheel() {
     locker_end();
   }
   task_wait_for_zero_threads();
-  mark_and_sweep();
   for (int i = 0; i < 300; i++) {
     locker_start1(wheel->ref);
     o = object_get(wheel->ref, "next");
@@ -233,15 +226,9 @@ void benzene_ring_scalability(int size) {
   }
 
   printf("Benzene x%d constructed.\n", n);
-  task_wait_for_zero_threads();
-  clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
-
   for (int i = 0; i < n; ++i ){
     root_free(a[i][0]);
   }
-  task_wait_for_zero_threads();
-  clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
-  printf("Collection time=%lf\n", 0.001*(end-start));
 }
 
 void benzene_ring_ms_test() {
@@ -342,83 +329,13 @@ void object_set_test() {
   }
 }
 
-extern List *roots;
-extern HashSet *objects;
-extern volatile int objectslive;
-void mark_and_sweep(){
-  printf("Mark and Sweep\n");
-
-  Deque *pqueue = NULL;
-  deque_new(&pqueue);
-
-  if (roots == NULL) {
-    printf("null queue\n");
-  } else {
-    printf("size %zu\n", list_size(roots));
-      }
-
-  if (list_size(roots) > 0) {
-    LIST_FOREACH(item, roots, { deque_add_last(pqueue, item); });
-  }
-
-  Object *obj;
-  while (deque_size(pqueue) > 0) {
-    deque_remove_first(pqueue, (void **) &obj);
-    if (!obj->mark) {
-      obj->mark = true;
-      if (hashtable_size(obj->links) > 0) {
-        HASHTABLE_FOREACH(l, obj->links, {
-          link_t *li = l->value;
-          deque_add_last(pqueue, li->target);
-        })
-      }
-    }
-  }
-  deque_destroy(pqueue);
-
-  HashSet *copy;
-  hashset_new(&copy);
-  if (hashset_size(objects) > 0) {
-    HASHSET_FOREACH(orig, objects, { hashset_add(copy, orig); })
-  }
-  int live = 0;
-  objectslive = object_live();
-  if (hashset_size(copy) > 0) {
-    HASHSET_FOREACH(so, copy, {
-      Object *o = so;
-      if (o->mark) {
-        assert(o->count[o->which] > 0);
-        assert(o->count[bit_flip(o->which)] >= 0);
-        assert(o->count[2] == 0); // No ghosts allowed!
-        assert(!o->deleted);
-        assert(o->collector == NULL);
-        live++;
-        o->mark = false;
-      } else {
-        assert(o->deleted);
-      }
-    })
-  }
-  hashset_destroy(copy);
-
-  printf("After Mark and Sweep, live = %d\n", live);
-  printf("live = %d; slive = %d\n", live, objectslive);
-
-  if (live == objectslive) {
-    printf(" MS == B\n");
-  } else {
-    printf(" MS != B\n");
-  }
-}
-
-void status() {
-  task_wait_for_zero_threads();
-  object_status();
-  mark_and_sweep();
-}
+extern atomic_size_t world_count;
 
 int main(int argc, char** argv) {
+  struct timespec wall_start;
+  timespec_get(&wall_start, TIME_UTC);
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
+
   world_init();
   printf("hello world!\n");
   simplecycle();
@@ -431,16 +348,29 @@ int main(int argc, char** argv) {
   object_set_test();
 
   for (int x = 1; x <= 16; ++x) {
-    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
+//    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
     benzene_ring_scalability(x);
-//    status();
-    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
-    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
+//    task_wait_for_zero_threads();
+//    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
+//    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
   }
 
-  status();
+  task_wait_for_zero_threads();
   world_teardown();
+
   clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
-  printf("Total time elasped: %lf\n", 0.001*(end-start));
+
+  struct timespec wall_end;
+  timespec_get(&wall_end, TIME_UTC);
+
+  struct timespec wall_diff = {
+      .tv_nsec = (wall_end.tv_nsec - wall_start.tv_nsec),
+      .tv_sec  = (wall_end.tv_sec - wall_start.tv_sec)
+  };
+
+  printf("Total cpu time elasped: %lf\n", 0.001*(end-start));
+  double wall_diff_combined = wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec);
+  printf("Total wall time elapsed: %lf\n", wall_diff_combined);
+  printf("Total number of objects: %zu\n", world_count);
   exit(0);
 }

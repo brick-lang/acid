@@ -7,24 +7,22 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdatomic.h>
 #include "locker.h"
 #include "wrappedlock.h"
 #include "task.h"
 #include "worker.h"
 
-static wrappedlock_t *lock = NULL;
-static volatile int count = 0;
+static cnd_t zero_threads_cond;
+static mtx_t count_mutex;
+static volatile size_t count = 0;
 
 void task_setup() {
-  assert(lock == NULL);
-  //lock = wrappedlock_create(PRIORITY_LIST);
-  lock = malloc(sizeof(wrappedlock_t));
-  lock->cmplock = complock_create(PRIORITY_LIST, 0);
-  cnd_init(&lock->cond);
+  mtx_init(&count_mutex, mtx_plain);
+  cnd_init(&zero_threads_cond);
 }
 
 void task_teardown() {
-  wrappedlock_destroy(lock);
 }
 
 task_t *task_create(){
@@ -39,28 +37,28 @@ void task_destroy(task_t *task) {
 }
 
 void task_start(task_t* task) {
-  locker_start1(lock);
+  mtx_lock(&count_mutex);
   count++;
-  locker_end();
-  worker_add(task);
+  mtx_unlock(&count_mutex);
+  worker_add_task(task);
 }
 
-int task_get_thread_count() {
-  int retval;
-  locker_start1(lock);
+size_t task_get_thread_count() {
+  size_t retval;
+  mtx_lock(&count_mutex);
   retval = count;
-  locker_end();
+  mtx_unlock(&count_mutex);
   return retval;
 }
 
 bool task_wait_for_zero_threads() {
   bool retval;
-  locker_start1(lock);
+  mtx_lock(&count_mutex);
   if (count > 0) {
-    cnd_wait(&lock->cond, &lock->cmplock->mtx);
+    cnd_wait(&zero_threads_cond, &count_mutex);
   }
   retval = (count == 0);
-  locker_end();
+  mtx_unlock(&count_mutex);
   return retval;
 }
 
@@ -68,14 +66,14 @@ void task_run(task_t *task) {
   bool again = task->run(task->runarg);
   // TODO: Error handle here (stack trace, etc.)
   if (again) {
-    worker_add(task);
+    worker_add_task(task);
   } else {
     task_destroy(task);
-    locker_start1(lock);
+    mtx_lock(&count_mutex);
     count--;
     if(count == 0) {
-      cnd_broadcast(&lock->cond);
+      cnd_broadcast(&zero_threads_cond);
     }
-    locker_end();
+    mtx_unlock(&count_mutex);
   }
 }

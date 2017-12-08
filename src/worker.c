@@ -13,47 +13,69 @@
 #define NUM_WORKERS 8
 
 static thrd_t WORKERS[NUM_WORKERS];
-static mtx_t worker_synchro_mutex;
+static mtx_t work_sychro_mutex;
 static List *work; // List<task_t>
 static volatile bool endtime = false;
 
+static int worker_run(void*) ;
+
 void workers_setup() {
   list_new(&work);
-  mtx_init(&worker_synchro_mutex, mtx_plain | mtx_recursive);
+  mtx_init(&work_sychro_mutex, mtx_plain | mtx_recursive);
   for (int i = 0; i < NUM_WORKERS; i++) {
     thrd_create(&WORKERS[i], worker_run, NULL);
   }
 }
 
+/**
+ * Signal closing time, wait for all threads
+ * to terminate, and clean up the workspace.
+ */
 void workers_teardown() {
   endtime = true;
   for (int i = 0; i < NUM_WORKERS; i++) {
     thrd_join(WORKERS[i], NULL);
   }
 
-  mtx_lock(&worker_synchro_mutex);
+  mtx_lock(&work_sychro_mutex);
   assert(list_size(work) == 0);
   list_destroy(work);
-  mtx_unlock(&worker_synchro_mutex);
-  mtx_destroy(&worker_synchro_mutex);
+  mtx_unlock(&work_sychro_mutex);
+  mtx_destroy(&work_sychro_mutex);
 }
 
-task_t *worker_get() {
-  task_t *retval;
-  mtx_lock(&worker_synchro_mutex);
-  if (list_size(work) == 0) {
-    retval = NULL;
-  } else {
+/**
+ * Add a task to the work queue
+ * @param task the task to add
+ */
+void worker_add_task(task_t *task) {
+  mtx_lock(&work_sychro_mutex);
+  list_add_last(work, task);
+  mtx_unlock(&work_sychro_mutex);
+}
+
+/**
+ * Get the next task in the work queue
+ * @return
+ */
+static task_t *worker_get_next_task() {
+  task_t *retval = NULL;
+  mtx_lock(&work_sychro_mutex);
+  if (list_size(work) > 0) {
     list_remove_first(work, (void **) &retval);
   }
-  mtx_unlock(&worker_synchro_mutex);
+  mtx_unlock(&work_sychro_mutex);
   return retval;
 }
 
-int worker_run(__attribute__((__unused__)) void* _) {
+/**
+ * The primary function of the worker threads
+ * @return the exit status of the thread
+ */
+static int worker_run(void* ignored) {
   locker_setup();
   while (!endtime) {
-    task_t *task = worker_get();
+    task_t *task = worker_get_next_task();
     if (task != NULL) {
       task_run(task);
     }
@@ -62,10 +84,3 @@ int worker_run(__attribute__((__unused__)) void* _) {
   locker_teardown();
   return 0;
 }
-
-void worker_add(task_t *task) {
-  mtx_lock(&worker_synchro_mutex);
-  list_add_last(work, task);
-  mtx_unlock(&worker_synchro_mutex);
-}
-

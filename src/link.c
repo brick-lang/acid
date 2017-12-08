@@ -50,7 +50,7 @@ void link_phantomize(link_t *link) {
 void link_dec(link_t* link) {
   if (link->target == NULL) return;
 
-  locker_start2(link->target, link->src);
+  locker_start2(link->src, link->target);
   if (link->phantomized) {
     object_dec_phantom(link->target);
   } else {

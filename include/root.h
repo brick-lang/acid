@@ -11,7 +11,6 @@ typedef struct root_t {
   Object *ref;
 } root_t;
 
-void root_setup();
 root_t *root_create();
 void root_alloc(root_t *root);
 void root_free(root_t *root);

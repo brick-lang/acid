@@ -12,8 +12,10 @@ atomic_size_t world_count;
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
   if (obj->collector != c) {
-    if (c != NULL) counter_inc_ref(c->count);
-    if (obj->collector != NULL) counter_dec_ref(obj->collector->count);
+    if (c != NULL)
+      counter_inc_ref(&c->count);
+    if (obj->collector != NULL) 
+      counter_dec_ref(&obj->collector->count);
     obj->collector = c;
   }
   locker_end();

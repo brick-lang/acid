@@ -18,7 +18,7 @@ typedef struct collector_t {
   volatile bool terminated;
   struct collector_t* forward;
 
-  counter_t *const count;
+  counter_t count;
   safelist_t *const collect;
   safelist_t *const merged_list;
   safelist_t *const recovery_list;

@@ -9,12 +9,13 @@ collector_t *collector_create() {
   idbaseobject_init((IdBaseObject *) collector);
   collector->terminated = false;
   collector->forward = NULL;
-  *(counter_t **) &collector->count = counter_create();
-  *(safelist_t **) &collector->collect = safelist_create(collector->count);
-  *(safelist_t **) &collector->merged_list = safelist_create(collector->count);
-  *(safelist_t **) &collector->recovery_list = safelist_create(collector->count);
-  *(safelist_t **) &collector->rebuild_list = safelist_create(collector->count);
-  *(safelist_t **) &collector->clean_list = safelist_create(collector->count);
+  collector->count.ref_count = 0;
+  collector->count.store_count = 0;
+  *(safelist_t **) &collector->collect = safelist_create(&collector->count);
+  *(safelist_t **) &collector->merged_list = safelist_create(&collector->count);
+  *(safelist_t **) &collector->recovery_list = safelist_create(&collector->count);
+  *(safelist_t **) &collector->rebuild_list = safelist_create(&collector->count);
+  *(safelist_t **) &collector->clean_list = safelist_create(&collector->count);
 
   *(complock_t **) &collector->lock = complock_create(PRIORITY_COLLECTOR, collector->id);
 
@@ -22,7 +23,6 @@ collector_t *collector_create() {
 }
 
 static void collector_destroy(collector_t *collector) {
-  counter_destroy(collector->count);
   safelist_destroy(collector->collect);
   safelist_destroy(collector->merged_list);
   safelist_destroy(collector->recovery_list);
@@ -42,7 +42,7 @@ static void collector_terminate(collector_t *collector) {
   locker_start2(collector, collector->forward);
   collector->terminated = true;
   collector_set_forward(collector, NULL);
-  assert(counter_done(collector->count));
+  assert(counter_done(&collector->count));
   locker_end();
 }
 
@@ -54,9 +54,9 @@ void collector_set_forward(collector_t *collector, collector_t *f) {
   }
 
   if (f != NULL)
-    counter_inc_ref(f->count);
+    counter_inc_ref(&f->count);
   if (collector->forward != NULL)
-    counter_dec_ref(collector->forward->count);
+    counter_dec_ref(&collector->forward->count);
   if (f != NULL)
     assert(collector->forward == NULL); // TODO: Make sure this is *actually* needed
 
@@ -98,7 +98,7 @@ void collector_add_object(collector_t *collector, Object *obj) {
 bool collector_run(void *c) {
   collector_t* collector = c;
 
-  if (counter_continue_waiting(collector->count)) {
+  if (counter_continue_waiting(&collector->count)) {
     return true;
   }
 
@@ -139,8 +139,7 @@ bool collector_run(void *c) {
   }
 
   locker_start2(collector, collector->forward);
-  bool done = counter_done(collector->count);
-  if (done) {
+  if (counter_done(&collector->count)) {
     collector_terminate(collector);
     locker_end(); // release the collector->lock *before* destruction
     collector_destroy(collector);

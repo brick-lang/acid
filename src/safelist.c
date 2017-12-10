@@ -1,12 +1,12 @@
-#include "locker.h"
 #include "safelist.h"
+#include "locker.h"
 #include "object.h"
 
 safelist_t *safelist_create(counter_t *c) {
   safelist_t *safelist = malloc(sizeof(safelist_t));
-  *(wrappedlock_t**)&safelist->lock = wrappedlock_create(PRIORITY_LIST);
-  *(counter_t**)&safelist->count = c;
-  list_new((List **) &safelist->data);
+  *(wrappedlock_t **)&safelist->lock = wrappedlock_create(PRIORITY_LIST);
+  *(counter_t **)&safelist->count = c;
+  list_new((List **)&safelist->data);
   safelist->_forward = NULL;
   return safelist;
 }

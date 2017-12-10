@@ -16,7 +16,7 @@ typedef atomic_uint_fast8_t bit_t;
 typedef struct Object {
   const unsigned int id;
   complock_t *lock;
-  HashTable *links; // HashTable<String, Link>
+  HashTable *links;  // HashTable<String, Link>
   bit_t which;
   bool phantomized;
   int count[3];
@@ -27,7 +27,7 @@ typedef struct Object {
 Object *object_create();
 Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
-void object_phantomize_node(Object* obj, struct collector_t *cptr);
+void object_phantomize_node(Object *obj, struct collector_t *cptr);
 void object_recover_node(Object *obj, struct collector_t *cptr);
 void object_inc_strong(Object *obj);
 void object_dec(Object *obj, bit_t w);
@@ -41,4 +41,4 @@ void object_set_collector(Object *obj, struct collector_t *c);
 }
 #endif
 
-#endif //OBJECT_H
+#endif  // OBJECT_H

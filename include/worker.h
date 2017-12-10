@@ -15,4 +15,4 @@ void worker_add_task(task_t *task);
 }
 #endif
 
-#endif //WORKER_H
+#endif  // WORKER_H

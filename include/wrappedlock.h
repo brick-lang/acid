@@ -8,7 +8,8 @@ extern "C" {
 #endif
 
 /**
- * wrappedlock_t conforms to the 'Lockable' interface, i.e. it has a complock_t* at 'cmplock';
+ * wrappedlock_t conforms to the 'Lockable' interface, i.e. it has a complock_t*
+ * at 'cmplock';
  */
 typedef struct wrappedlock_t {
   const unsigned int id;
@@ -16,11 +17,11 @@ typedef struct wrappedlock_t {
   cnd_t cond;
 } wrappedlock_t;
 
-wrappedlock_t* wrappedlock_create(priority_t p);
+wrappedlock_t *wrappedlock_create(priority_t p);
 void wrappedlock_destroy(wrappedlock_t *wl);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //WRAPPEDLOCK_H
+#endif  // WRAPPEDLOCK_H

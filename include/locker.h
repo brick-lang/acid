@@ -13,7 +13,7 @@ extern "C" {
  * more locks if (1) it doesn't have any yet, or (2) the new locks
  * have lower "priority" than any locks already obtained. */
 typedef struct locker_t {
-  List *stack;       // List<locker_entry_t*>
+  List *stack;  // List<locker_entry_t*>
 } locker_t;
 
 void locker_setup();
@@ -30,4 +30,4 @@ void locker_end();
 }
 #endif
 
-#endif //LOCKER_H
+#endif  // LOCKER_H

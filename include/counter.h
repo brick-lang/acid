@@ -26,4 +26,4 @@ bool counter_done(counter_t *counter);
 }
 #endif
 
-#endif //COUNTER_H
+#endif  // COUNTER_H

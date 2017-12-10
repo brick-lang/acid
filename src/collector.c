@@ -6,18 +6,19 @@
 
 collector_t *collector_create() {
   collector_t *collector = malloc(sizeof(collector_t));
-  idbaseobject_init((IdBaseObject *) collector);
+  idbaseobject_init((IdBaseObject *)collector);
   collector->terminated = false;
   collector->forward = NULL;
   collector->count.ref_count = 0;
   collector->count.store_count = 0;
-  *(safelist_t **) &collector->collect = safelist_create(&collector->count);
-  *(safelist_t **) &collector->merged_list = safelist_create(&collector->count);
-  *(safelist_t **) &collector->recovery_list = safelist_create(&collector->count);
-  *(safelist_t **) &collector->rebuild_list = safelist_create(&collector->count);
-  *(safelist_t **) &collector->clean_list = safelist_create(&collector->count);
+  *(safelist_t **)&collector->collect = safelist_create(&collector->count);
+  *(safelist_t **)&collector->merged_list = safelist_create(&collector->count);
+  *(safelist_t **)&collector->recovery_list =
+      safelist_create(&collector->count);
+  *(safelist_t **)&collector->rebuild_list = safelist_create(&collector->count);
+  *(safelist_t **)&collector->clean_list = safelist_create(&collector->count);
 
-  *(complock_t **) &collector->lock = complock_create(PRIORITY_COLLECTOR, collector->id);
+  *(complock_t **)&collector->lock = complock_create(PRIORITY_COLLECTOR, collector->id);
 
   return collector;
 }
@@ -48,55 +49,46 @@ static void collector_terminate(collector_t *collector) {
 
 void collector_set_forward(collector_t *collector, collector_t *f) {
   locker_start3(collector, collector->forward, f);
-  if (f == collector->forward) { // check equality based on address, not value
+  if (f == collector->forward) {  // check equality based on address, not value
     locker_end();
     return;
   }
 
+  if (f != NULL) counter_inc_ref(&f->count);
+  if (collector->forward != NULL) counter_dec_ref(&collector->forward->count);
   if (f != NULL)
-    counter_inc_ref(&f->count);
-  if (collector->forward != NULL)
-    counter_dec_ref(&collector->forward->count);
-  if (f != NULL)
-    assert(collector->forward == NULL); // TODO: Make sure this is *actually* needed
+    assert(collector->forward ==
+           NULL);  // TODO: Make sure this is *actually* needed
 
   collector->forward = f;
   locker_end();
 }
 
-//char *collector_to_string(collector_t *collector) {
-//  snprintf(collstr, COLLSTRLEN, "#<Collector:%p id:%d collector_size:%zu rec_size:%zu forward_id:%d>",
-//          (void*)collector, collector->id, safelist_size(collector->collect),
-//          safelist_size(collector->merged_list),
-//          (collector->forward == NULL ? -1 : (int)collector->forward->id));
-//  return (char*)collstr;
-//}
-
 void collector_add_object(collector_t *collector, Object *obj) {
   collector_t *add_to = collector;
   while (true) {
     locker_start2(add_to, obj);
-    assert (!add_to->terminated); //: count
-    //fix collector pointers in objects on the fly
+    assert(!add_to->terminated);  //: count
+    // fix collector pointers in objects on the fly
     if (add_to->forward != NULL) {
       add_to = add_to->forward;
       locker_end();
       continue;
     }
-    // Here.here();
     obj->count[obj->which]++;
-    obj->count[2]++; // to this here rather than phantomize_node
+    obj->count[2]++;  // to this here rather than phantomize_node
     // the reason is because a phantom count of one prevents
     // the collector from being set to null
     safelist_add(add_to->collect, obj);
-    object_set_collector(obj, add_to); // TODO: What if it has a collector already?
+    object_set_collector(obj,
+                         add_to);  // TODO: What if it has a collector already?
     locker_end();
     break;
   }
 }
 
 bool collector_run(void *c) {
-  collector_t* collector = c;
+  collector_t *collector = c;
 
   if (counter_continue_waiting(&collector->count)) {
     return true;
@@ -122,7 +114,7 @@ bool collector_run(void *c) {
   while (true) {
     Object *obj = safelist_poll(collector->recovery_list);
     if (obj == NULL) break;
-    object_recover_node(obj, collector); // don't need to pass rebuild
+    object_recover_node(obj, collector);  // don't need to pass rebuild
     safelist_add(collector->clean_list, obj);
   }
 
@@ -141,7 +133,7 @@ bool collector_run(void *c) {
   locker_start2(collector, collector->forward);
   if (counter_done(&collector->count)) {
     collector_terminate(collector);
-    locker_end(); // release the collector->lock *before* destruction
+    locker_end();  // release the collector->lock *before* destruction
     collector_destroy(collector);
     return false;
   }
@@ -151,7 +143,8 @@ bool collector_run(void *c) {
   return true;
 }
 
-static void collector_forward_safelists_to(collector_t *collector, collector_t *s) {
+static void collector_forward_safelists_to(collector_t *collector,
+                                           collector_t *s) {
   // s is forwarding
   // collector is receiving
   locker_start2(collector, s);
@@ -212,4 +205,3 @@ collector_t *collector_update(collector_t *collector) {
   }
   return retval;
 }
-

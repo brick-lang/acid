@@ -1,23 +1,15 @@
-#include <stdlib.h>
 #include <stdio.h>
-#include <limits.h>
-#include <assert.h>
+#include <stdlib.h>
 
 #include "complock.h"
-#include "locker.h"
 #include "lockable.h"
+#include "locker.h"
 
 static _Thread_local locker_t *current_locks = NULL;
 
-void locker_setup() {
-  assert(current_locks == NULL);
-  current_locks = locker_create();
-}
+void locker_setup() { current_locks = locker_create(); }
 
-void locker_teardown() {
-  assert(current_locks != NULL);
-  locker_destroy(current_locks);
-}
+void locker_teardown() { locker_destroy(current_locks); }
 
 locker_t *locker_create() {
   locker_t *locker = malloc(sizeof(locker_t));
@@ -33,16 +25,16 @@ void locker_destroy(locker_t *locker) {
 
 typedef struct locker_entry_t {
   size_t size;
-  complock_t *ary[4]; // we lock on at max four objects at once
+  complock_t *ary[4];  // we lock on at max four objects at once
 } locker_entry_t;
 
-static locker_entry_t* locker_entry_create() {
-  locker_entry_t* le = malloc(sizeof(locker_entry_t));
+static locker_entry_t *locker_entry_create() {
+  locker_entry_t *le = malloc(sizeof(locker_entry_t));
   le->size = 0;
   return le;
 }
 
-static inline void locker_entry_add(locker_entry_t *le, complock_t* elem) {
+static inline void locker_entry_add(locker_entry_t *le, complock_t *elem) {
   le->ary[le->size++] = elem;
 }
 
@@ -71,23 +63,29 @@ static inline void isort(complock_t *arr[], size_t count) {
 
 /**
  * Sort locks and lock them
- * @param locks_count the number of locks passed in
+ * @param locks_count the number of locks passed in (should not ever be more
+ * than 4)
  * @param locks the locks to use
  */
-static void locker_start(int locks_count, void *locks[]) {
+static void locker_start(size_t locks_count, void *locks[]) {
   // Sort the current set of lockables and extract the complocks
-  complock_t* filtered_locks[locks_count];
+  complock_t *filtered_locks[locks_count];
   size_t filtered_locks_count = 0;
   for (int i = 0; i < locks_count; i++) {
-    if (locks[i] != NULL) { // remove any nulls
-      filtered_locks[filtered_locks_count++] = ((lockable_t *)locks[i])->cmplock;
+    if (locks[i] != NULL) {  // remove any nulls
+      lockable_t *lock = locks[i];
+      if (lock->cmplock != NULL) {
+        filtered_locks[filtered_locks_count++] = lock->cmplock;
+      }
     }
   }
-  isort(filtered_locks, filtered_locks_count);
-  filtered_locks_count = remove_duplicate_complocks(filtered_locks, filtered_locks_count);
+  if (filtered_locks_count > 1) {
+    isort(filtered_locks, filtered_locks_count);
+    filtered_locks_count = remove_duplicate_complocks(filtered_locks, filtered_locks_count);
+  }
 
   locker_entry_t *new_locks = locker_entry_create();
-  for (int i = 0; i < filtered_locks_count; i++) {
+  for (uint_fast8_t i = 0; i < filtered_locks_count; i++) {
     complock_t *lock = filtered_locks[i];
     complock_lock(lock);
     locker_entry_add(new_locks, lock);
@@ -121,10 +119,9 @@ void locker_start4(void *lock1, void *lock2, void *lock3, void *lock4) {
  */
 void locker_end() {
   locker_t *lk = current_locks;
-  assert(lk != NULL);
 
   locker_entry_t *locks = NULL;
-  list_remove_last(lk->stack, (void **) &locks); // pop off the stack;
+  list_remove_last(lk->stack, (void **)&locks);  // pop off the stack;
 
   complock_t *lock = NULL;
   for (int i = 0; i < locks->size; ++i) {

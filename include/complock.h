@@ -1,3 +1,4 @@
+#include <limits.h>
 #ifdef __STDC_NO_THREADS__
 #include "../lib/tinycthread/tinycthread.h"
 #else

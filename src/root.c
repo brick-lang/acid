@@ -1,8 +1,8 @@
+#include "root.h"
 #include "../lib/collectc/include/list.h"
 #include "locker.h"
-#include "root.h"
 
-root_t *root_create(){
+root_t *root_create() {
   root_t *root = malloc(sizeof(root));
   root->ref = NULL;
   return root;
@@ -23,10 +23,8 @@ void root_alloc(root_t *root) {
  */
 void root_set(root_t *root, Object *obj) {
   locker_start2(obj, root->ref);
-  if (obj != NULL)
-    object_inc_strong(obj);
-  if (root->ref != NULL)
-    object_dec_strong(root->ref);
+  if (obj != NULL) object_inc_strong(obj);
+  if (root->ref != NULL) object_dec_strong(root->ref);
 
   root->ref = obj;
   locker_end();

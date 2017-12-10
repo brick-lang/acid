@@ -1,8 +1,8 @@
-#include <assert.h>
 #include "link.h"
-#include "object.h"
-#include "locker.h"
+#include <assert.h>
 #include "collector.h"
+#include "locker.h"
+#include "object.h"
 
 link_t *link_create(Object *s) {
   link_t *link = malloc(sizeof(link_t));
@@ -21,7 +21,7 @@ link_t *link_create(Object *s) {
  * @param link the link to destroy
  */
 void link_destroy(link_t *link) {
-  locker_start1(link->src);   // lock on the source object
+  locker_start1(link->src);  // lock on the source object
   bool target_null = (link->target == NULL);
   locker_end();
   if (!target_null) {
@@ -42,12 +42,15 @@ void link_phantomize(link_t *link) {
   assert(link->target->collector != NULL || link->src->collector != NULL);
   object_merge_collectors(link->src, link->target);
   link->phantomized = true;
-  assert(collector_equals(link->target->collector, link->src->collector)); // : "diff1: t="+target.collector+" s="+src.collector;
+  assert(collector_equals(
+      link->target->collector,
+      link->src
+          ->collector));  // : "diff1: t="+target.collector+" s="+src.collector;
   locker_end();
 }
 
 // Pseudo: LinkFree
-void link_dec(link_t* link) {
+void link_dec(link_t *link) {
   if (link->target == NULL) return;
 
   locker_start2(link->src, link->target);
@@ -58,5 +61,3 @@ void link_dec(link_t* link) {
   }
   locker_end();
 }
-
-

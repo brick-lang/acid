@@ -15,11 +15,11 @@ root_t *root_create();
 void root_alloc(root_t *root);
 void root_free(root_t *root);
 void root_set(root_t *root, Object *o);
-//Object *root_gets(root_t *root, char* field);
-//void root_sets(root_t *root, char* field, Object* obj);
+// Object *root_gets(root_t *root, char* field);
+// void root_sets(root_t *root, char* field, Object* obj);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //ROOT_H
+#endif  // ROOT_H

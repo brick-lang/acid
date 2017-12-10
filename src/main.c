@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include "../lib/collectc/include/list.h"
 #include "here.h"
-#include "worker.h"
-#include "root.h"
 #include "locker.h"
+#include "root.h"
+#include "worker.h"
 
-static List* keylist = NULL;
+static List *keylist = NULL;
 
 void world_init() {
   list_new(&keylist);
@@ -51,7 +51,7 @@ void simplecycle2() {
   root_free(b);
   object_set(a->ref, "y", NULL);
 
-  thrd_sleep(&(struct timespec) {.tv_nsec=3000000}, NULL);
+  thrd_sleep(&(struct timespec){.tv_nsec = 3000000}, NULL);
   root_free(a);
 }
 
@@ -146,13 +146,13 @@ root_t *dlink(Object *o, int n) {
   root_t *a = root_create();
   root_alloc(a);
   if (o != NULL) {
-    object_set(o, "next", a->ref); // forward
-    object_set(a->ref, "prev", o); // back
+    object_set(o, "next", a->ref);  // forward
+    object_set(a->ref, "prev", o);  // back
     if (n == 0) {
-      return a; // base case
+      return a;  // base case
     }
   }
-  root_t *b = dlink(a->ref, n-1);
+  root_t *b = dlink(a->ref, n - 1);
   root_free(a);
   return b;
 }
@@ -178,9 +178,9 @@ void clique() {
 
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      if (i!=j) {
+      if (i != j) {
         char *key = calloc(7, sizeof(char));
-        snprintf(key, 6, "%dx%d", i+1, j+1);
+        snprintf(key, 6, "%dx%d", i + 1, j + 1);
         list_add(keylist, key);
         object_set(a[i]->ref, key, a[j]->ref);
       }
@@ -206,35 +206,39 @@ void benzene_ring_scalability(int size) {
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < 6; ++j) {
       char *key = calloc(5, sizeof(char));
-      snprintf(key, 5, "%d", (j+1)%8);
+      snprintf(key, 5, "%d", (j + 1) % 8);
       list_add(keylist, key);
-      Object *target = a[i][(j+1)%6]->ref;
+      Object *target = a[i][(j + 1) % 6]->ref;
       object_set(a[i][j]->ref, key, target);
     }
   }
 
-  for (int i = 0; i < n-1; ++i) {
-    object_set(a[i][1]->ref, "next1", a[i+1][5]->ref);
+  for (int i = 0; i < n - 1; ++i) {
+    object_set(a[i][1]->ref, "next1", a[i + 1][5]->ref);
   }
-  for (int i = n-1; i > 0; --i) {
-    object_set(a[i][4]->ref, "next2", a[i-1][2]->ref);
+  for (int i = n - 1; i > 0; --i) {
+    object_set(a[i][4]->ref, "next2", a[i - 1][2]->ref);
   }
 
   for (int i = 0; i < n; ++i) {
     for (int j = 1; j < 6; ++j) {
       root_free(a[i][j]);
+      a[i][j] = NULL;
     }
   }
 
-  printf("Benzene x%d constructed.\n", n);
-  for (int i = 0; i < n; ++i ){
+  // printf("Benzene x%d constructed.\n", n);
+  printf(".");
+  fflush(stdout);
+  for (int i = 0; i < n; ++i) {
     root_free(a[i][0]);
+    a[i][0] = NULL;
   }
 }
 
 void benzene_ring_ms_test() {
   int n = 8;
-  
+
   root_t *a[n][6];
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < 6; ++j) {
@@ -242,20 +246,20 @@ void benzene_ring_ms_test() {
       root_alloc(a[i][j]);
     }
   }
-  
+
   // create benzene
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < 6; ++j) {
       char *key = calloc(5, sizeof(char));
-      snprintf(key, 5, "%d", (j+1)%8);
+      snprintf(key, 5, "%d", (j + 1) % 8);
       list_add(keylist, key);
-      Object *target = a[i][(j+1)%6]->ref;
+      Object *target = a[i][(j + 1) % 6]->ref;
       object_set(a[i][j]->ref, key, target);
     }
   }
 
-  for (int j = n-1; j > 0; --j) {
-    object_set(a[j][4]->ref, "next2", a[j-1][2]->ref);
+  for (int j = n - 1; j > 0; --j) {
+    object_set(a[j][4]->ref, "next2", a[j - 1][2]->ref);
   }
 
   for (int i = 0; i < n; ++i) {
@@ -281,14 +285,14 @@ void object_set_test() {
       root_alloc(a[i][j]);
     }
   }
-  
+
   // create benzene
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < 6; ++j) {
-      object_set(a[i][j]->ref, "next", a[i][(j+1)%6]->ref);
+      object_set(a[i][j]->ref, "next", a[i][(j + 1) % 6]->ref);
     }
   }
-  
+
   // partially free
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < 5; ++j) {
@@ -312,8 +316,8 @@ void object_set_test() {
 
     if (!phantomized) {
       int ncount = 0;
-      while(!object_get(a[i][5]->ref, "next")->phantomized) {
-        thrd_sleep(&(struct timespec) {.tv_nsec=1000000}, NULL);
+      while (!object_get(a[i][5]->ref, "next")->phantomized) {
+        thrd_sleep(&(struct timespec){.tv_nsec = 1000000}, NULL);
         if (ncount++ == 10) break;
       }
       root_set(a[i][5], object_get(a[i][5]->ref, "next"));
@@ -322,7 +326,7 @@ void object_set_test() {
   }
   if (race_checks == n) {
     for (int i = 1; i < n; ++i) {
-      object_set(a[i][5]->ref, "next1", a[i-1][5]->ref);
+      object_set(a[i][5]->ref, "next1", a[i - 1][5]->ref);
     }
     for (int i = 0; i < n; ++i) {
       root_free(a[i][5]);
@@ -332,29 +336,30 @@ void object_set_test() {
 
 extern atomic_size_t world_count;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   struct timespec wall_start;
   timespec_get(&wall_start, TIME_UTC);
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
 
   world_init();
   printf("hello world!\n");
-//  simplecycle();
-//  simplecycle2();
+  simplecycle();
+  simplecycle2();
   wheel();
-//  multi_collect();
-//  doubly_linked_list();
-//  clique();
-//  benzene_ring_ms_test();
-//  object_set_test();
+  multi_collect();
+  doubly_linked_list();
+  clique();
+  benzene_ring_ms_test();
+  object_set_test();
 
-//  for (int x = 1; x <= 16; ++x) {
-////    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
-//    benzene_ring_scalability(x);
-////    task_wait_for_zero_threads();
-////    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
-////    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
-//  }
+  for (int x = 1; x <= 128; ++x) {
+    //    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
+    benzene_ring_scalability(x);
+    //    task_wait_for_zero_threads();
+    //    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
+    //    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
+  }
+  printf("\n");
 
   task_wait_for_zero_threads();
   world_teardown();
@@ -366,11 +371,11 @@ int main(int argc, char** argv) {
 
   struct timespec wall_diff = {
       .tv_nsec = (wall_end.tv_nsec - wall_start.tv_nsec),
-      .tv_sec  = (wall_end.tv_sec - wall_start.tv_sec)
-  };
+      .tv_sec = (wall_end.tv_sec - wall_start.tv_sec)};
 
-  printf("Total cpu time elasped: %lf\n", 0.001*(end-start));
-  double wall_diff_combined = wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec);
+  printf("Total cpu time elasped: %lf\n", 0.001 * (end - start));
+  double wall_diff_combined =
+      wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec);
   printf("Total wall time elapsed: %lf\n", wall_diff_combined);
   printf("Total number of objects: %zu\n", world_count);
   exit(0);

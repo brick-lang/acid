@@ -3,13 +3,12 @@
 #ifndef TASK_H
 #define TASK_H
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct task_t {
-  bool (*run)(void*);
+  bool (*run)(void *);
   void *runarg;
 } task_t;
 
@@ -26,4 +25,4 @@ void task_destroy(task_t *task);
 }
 #endif
 
-#endif //TASK_H
+#endif  // TASK_H

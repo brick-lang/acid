@@ -5,13 +5,13 @@
 #include <threads.h>
 #endif
 
-#include <stdlib.h>
 #include <assert.h>
 #include <stdatomic.h>
+#include <stdlib.h>
 #include "locker.h"
-#include "wrappedlock.h"
 #include "task.h"
 #include "worker.h"
+#include "wrappedlock.h"
 
 static cnd_t zero_threads_cond;
 static mtx_t count_mutex;
@@ -22,21 +22,18 @@ void task_setup() {
   cnd_init(&zero_threads_cond);
 }
 
-void task_teardown() {
-}
+void task_teardown() {}
 
-task_t *task_create(){
+task_t *task_create() {
   task_t *task = malloc(sizeof(task_t));
   task->run = NULL;
   task->runarg = NULL;
   return task;
 }
 
-void task_destroy(task_t *task) {
-  free(task);
-}
+void task_destroy(task_t *task) { free(task); }
 
-void task_start(task_t* task) {
+void task_start(task_t *task) {
   mtx_lock(&count_mutex);
   count++;
   mtx_unlock(&count_mutex);
@@ -71,7 +68,7 @@ void task_run(task_t *task) {
     task_destroy(task);
     mtx_lock(&count_mutex);
     count--;
-    if(count == 0) {
+    if (count == 0) {
       cnd_broadcast(&zero_threads_cond);
     }
     mtx_unlock(&count_mutex);

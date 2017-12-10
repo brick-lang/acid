@@ -1,23 +1,21 @@
+#include "object.h"
 #include <assert.h>
 #include <stdatomic.h>
-#include "object.h"
+#include "collector.h"
 #include "idbaseobject.h"
 #include "link.h"
 #include "lockable.h"
-#include "collector.h"
 #include "locker.h"
 
-#define BIT_FLIP(b) ((b)^1)
+#define BIT_FLIP(b) ((b) ^ 1)
 
 atomic_size_t world_count;
 
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
   if (obj->collector != c) {
-    if (c != NULL)
-      counter_inc_ref(&c->count);
-    if (obj->collector != NULL) 
-      counter_dec_ref(&obj->collector->count);
+    if (c != NULL) counter_inc_ref(&c->count);
+    if (obj->collector != NULL) counter_dec_ref(&obj->collector->count);
     obj->collector = c;
   }
   locker_end();
@@ -25,7 +23,7 @@ void object_set_collector(Object *obj, collector_t *c) {
 
 Object *object_create() {
   Object *obj = malloc(sizeof(Object));
-  idbaseobject_init((IdBaseObject *) obj);
+  idbaseobject_init((IdBaseObject *)obj);
   hashtable_new(&obj->links);
   obj->lock = complock_create(PRIORITY_OBJECT, obj->id);
   obj->which = 0;
@@ -43,9 +41,9 @@ static void object_del(Object *obj) {
   lockable_t lockobj = {.id = 0, .cmplock = obj->lock};
   locker_start1(&lockobj);
   object_set_collector(obj, NULL);
-  assert(hashtable_size(obj->links) == 0); // make *sure* there are no links
+  assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
   hashtable_destroy(obj->links);
-  free(obj); // free the memory
+  free(obj);  // free the memory
   world_count--;
   locker_end();
   complock_destroy(lockobj.cmplock);
@@ -54,12 +52,12 @@ static void object_del(Object *obj) {
 // Pseudo: Delete
 static void object_die(Object *obj) {
   // TODO: Get rid of needing this (do destruction in the HASHTABLE_FOREACH)
-  link_t **lks = NULL; // Array<link_t*>
+  link_t **lks = NULL;  // Array<link_t*>
   size_t lks_size = 0;
 
   locker_start1(obj);
   if (hashtable_size(obj->links) > 0) {
-    lks = malloc(sizeof(link_t*) * hashtable_size(obj->links));
+    lks = malloc(sizeof(link_t *) * hashtable_size(obj->links));
     HASHTABLE_FOREACH(entry, obj->links, { lks[lks_size++] = entry->value; })
   }
   hashtable_remove_all(obj->links);
@@ -68,7 +66,7 @@ static void object_die(Object *obj) {
   bool has_phantoms = (obj->count[2] > 0);
   locker_end();
 
-  if (lks != NULL && lks_size > 0 ) {
+  if (lks != NULL && lks_size > 0) {
     for (size_t i = 0; i < lks_size; i++) {
       link_destroy(lks[i]);
     }
@@ -82,7 +80,7 @@ static void object_die(Object *obj) {
 
 static bool __object_request_delete_task_run(void *obj) {
   object_die(obj);
-  return false; // Don't run this operation again.
+  return false;  // Don't run this operation again.
 }
 
 static void object_request_delete(Object *const obj) {
@@ -95,7 +93,7 @@ static void object_request_delete(Object *const obj) {
 void object_dec(Object *obj, bit_t w) {
   locker_start1(obj);
   obj->count[w]--;
-  assert(obj->count[w] >= 0); // : object_to_string(obj);
+  assert(obj->count[w] >= 0);  // : object_to_string(obj);
   if (obj->count[w] == 0 && w == obj->which) {
     if (obj->count[BIT_FLIP(obj->which)] == 0 && obj->count[2] == 0) {
       object_request_delete(obj);
@@ -126,7 +124,7 @@ void object_dec(Object *obj, bit_t w) {
 void object_dec_phantom(Object *obj) {
   locker_start1(obj);
 
-  obj->count[2]--; // decrease the phantom count
+  obj->count[2]--;  // decrease the phantom count
   assert(obj->count[2] >= 0);
 
   if (obj->count[2] == 0) {
@@ -139,9 +137,7 @@ void object_dec_phantom(Object *obj) {
   locker_end();
 }
 
-void object_dec_strong(Object *obj) {
-  object_dec(obj, obj->which);
-}
+void object_dec_strong(Object *obj) { object_dec(obj, obj->which); }
 
 void object_inc_strong(Object *obj) {
   locker_start1(obj);
@@ -180,19 +176,19 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   assert(t != NULL);
 
   obj->count[obj->which]--;
-  assert(obj->count[obj->which] >= 0); //: object_to_string(obj);
+  assert(obj->count[obj->which] >= 0);  //: object_to_string(obj);
 
   if (obj->count[obj->which] > 0) {
     locker_end();
-    return; // fast exit
+    return;  // fast exit
   }
 
   bool phantomize = false;
-  link_t **phantoms = NULL; //Array<link_t*>
+  link_t **phantoms = NULL;  // Array<link_t*>
   size_t phantoms_size = 0;
 
   if (obj->count[BIT_FLIP(obj->which)] > 0) {
-    obj->which ^= 1; /// flip the which bit atomically.
+    obj->which ^= 1;  /// flip the which bit atomically.
   }
   // phantom count is > 0, but weak and strong are zero.
   if (!obj->phantomized) {
@@ -201,8 +197,9 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
     assert(obj->collector != NULL);
     obj->phantomization_complete = false;
     if (hashtable_size(obj->links) > 0) {
-      phantoms = malloc(sizeof(link_t*) * hashtable_size(obj->links));
-      HASHTABLE_FOREACH(entry, obj->links, { phantoms[phantoms_size++] = entry->value; })
+      phantoms = malloc(sizeof(link_t *) * hashtable_size(obj->links));
+      HASHTABLE_FOREACH(entry, obj->links,
+                        { phantoms[phantoms_size++] = entry->value; })
     }
   }
   locker_end();
@@ -239,12 +236,13 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
  * @param rebuildNext
  * @param lk
  */
-static void object_rebuild_link(safelist_t* rebuild_next, link_t *const lk) {
+static void object_rebuild_link(safelist_t *rebuild_next, link_t *const lk) {
   locker_start2(lk->src, lk->target);
   if (lk->phantomized) {
     if (lk->target == lk->src) {
       lk->which = BIT_FLIP(lk->target->which);
-    } else if (lk->target->phantomized || hashtable_size(lk->target->links) == 0) {
+    } else if (lk->target->phantomized ||
+               hashtable_size(lk->target->links) == 0) {
       lk->which = lk->target->which;
     } else {
       lk->which = BIT_FLIP(lk->target->which);
@@ -284,7 +282,7 @@ void object_recover_node(Object *obj, collector_t *cptr) {
     }
   }
 
-  char **rebuild = NULL; //Array<String>
+  char **rebuild = NULL;  // Array<String>
   size_t rebuild_size = 0;
 
   locker_start1(obj);
@@ -295,7 +293,8 @@ void object_recover_node(Object *obj, collector_t *cptr) {
     int wcount = 0;
     while (obj->phantomized && !obj->phantomization_complete) {
       locker_end();
-      thrd_sleep(&(struct timespec) {.tv_nsec=1000000}, NULL); //sleep for 1ms TODO: maybe change duration?
+      thrd_sleep(&(struct timespec){.tv_nsec = 1000000},
+                 NULL);  // sleep for 1ms TODO: maybe change duration?
       locker_start1(obj);
       wcount++;
       assert(wcount < 10000);
@@ -303,8 +302,9 @@ void object_recover_node(Object *obj, collector_t *cptr) {
     assert(obj->phantomization_complete);
     obj->phantomized = false;
     if (hashtable_size(obj->links) > 0) {
-      rebuild = malloc(sizeof(link_t*)*hashtable_size(obj->links));
-      HASHTABLE_FOREACH(entry, obj->links, { rebuild[rebuild_size++] = entry->key; })
+      rebuild = malloc(sizeof(link_t *) * hashtable_size(obj->links));
+      HASHTABLE_FOREACH(entry, obj->links,
+                        { rebuild[rebuild_size++] = entry->key; })
     }
   } else {
     assert(obj->count[BIT_FLIP(obj->which)] == 0);
@@ -314,7 +314,7 @@ void object_recover_node(Object *obj, collector_t *cptr) {
   if (rebuild != NULL) {
     link_t *lk = NULL;
     for (size_t i = 0; i < rebuild_size; i++) {
-      hashtable_get(obj->links, rebuild[i], (void **) &lk);
+      hashtable_get(obj->links, rebuild[i], (void **)&lk);
       assert(lk != NULL);
       object_rebuild_link(cptr->rebuild_list, lk);
     }
@@ -425,7 +425,7 @@ Object *object_get(Object *obj, char *field) {
 
   locker_start1(obj);
   link_t *lk = NULL;
-  hashtable_get(obj->links, field, (void **) &lk);
+  hashtable_get(obj->links, field, (void **)&lk);
   if (lk != NULL) retval = lk->target;
   locker_end();
 
@@ -437,10 +437,10 @@ void object_set(Object *obj, char *field, Object *referent) {
   link_t *old_link = NULL;
 
   locker_start2(obj, referent);
-  hashtable_get(obj->links, field, (void **) &old_link);
+  hashtable_get(obj->links, field, (void **)&old_link);
 
-  if  (referent == NULL) {
-    hashtable_remove(obj->links,field,NULL);
+  if (referent == NULL) {
+    hashtable_remove(obj->links, field, NULL);
     locker_end();
     if (old_link != NULL) link_dec(old_link);
     return;

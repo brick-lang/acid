@@ -7,17 +7,17 @@
 
 #include <assert.h>
 #include "../lib/collectc/include/list.h"
-#include "worker.h"
 #include "locker.h"
+#include "worker.h"
 
 #define NUM_WORKERS 8
 
 static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t work_sychro_mutex;
-static List *work; // List<task_t>
+static List *work;  // List<task_t>
 static volatile bool endtime = false;
 
-static int worker_run(void*) ;
+static int worker_run(void *);
 
 void workers_setup() {
   list_new(&work);
@@ -62,7 +62,7 @@ static task_t *worker_get_next_task() {
   task_t *retval = NULL;
   mtx_lock(&work_sychro_mutex);
   if (list_size(work) > 0) {
-    list_remove_first(work, (void **) &retval);
+    list_remove_first(work, (void **)&retval);
   }
   mtx_unlock(&work_sychro_mutex);
   return retval;
@@ -72,7 +72,7 @@ static task_t *worker_get_next_task() {
  * The primary function of the worker threads
  * @return the exit status of the thread
  */
-static int worker_run(void* ignored) {
+static int worker_run(void *ignored) {
   locker_setup();
   while (!endtime) {
     task_t *task = worker_get_next_task();

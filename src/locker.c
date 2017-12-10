@@ -60,6 +60,18 @@ static size_t remove_duplicate_complocks(complock_t **nums, size_t count) {
   return r + 1;
 }
 
+static inline void isort(complock_t *arr[], size_t count) {
+  for (int_fast8_t i = 1; i < count; i++) {
+    complock_t *key = arr[i];
+    int_fast8_t j = i-1;
+    while (j >= 0 && complock_compare(arr[j], key) == 1) {
+      arr[j+1] = arr[j];
+      j--;
+    }
+    arr[j+1] = key;
+  }
+}
+
 /**
  * Sort locks and lock them
  * @param locks_count the number of locks passed in
@@ -89,7 +101,7 @@ static void locker_start(int locks_count, void *locks[]) {
       filtered_locks[filtered_locks_count++] = ((lockable_t *)locks[i])->cmplock;
     }
   }
-  qsort(filtered_locks, filtered_locks_count, sizeof(complock_t*), complock_compare);
+  isort(filtered_locks, filtered_locks_count);
   filtered_locks_count = remove_duplicate_complocks(filtered_locks, filtered_locks_count);
 
   locker_entry_t *new_locks = locker_entry_create();

@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "bit.h"
+#include <stdint.h>
 
 #ifndef LINK_H
 #define LINK_H
@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 typedef struct link_t {
-  bit_t which;
+  uint_fast8_t which;
   bool phantomized;
   struct Object *target;
   struct Object *const src;

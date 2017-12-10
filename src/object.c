@@ -1,11 +1,13 @@
 #include <assert.h>
 #include <stdatomic.h>
+#include "object.h"
 #include "idbaseobject.h"
 #include "link.h"
 #include "lockable.h"
-#include "object.h"
 #include "collector.h"
 #include "locker.h"
+
+#define BIT_FLIP(b) ((b)^1)
 
 atomic_size_t world_count;
 
@@ -26,7 +28,7 @@ Object *object_create() {
   idbaseobject_init((IdBaseObject *) obj);
   hashtable_new(&obj->links);
   obj->lock = complock_create(PRIORITY_OBJECT, obj->id);
-  obj->which = BIT_ZERO;
+  obj->which = 0;
   obj->phantomized = false;
   obj->count[0] = 0;
   obj->count[1] = 0;
@@ -44,6 +46,7 @@ static void object_del(Object *obj) {
   assert(hashtable_size(obj->links) == 0); // make *sure* there are no links
   hashtable_destroy(obj->links);
   free(obj); // free the memory
+  world_count--;
   locker_end();
   complock_destroy(lockobj.cmplock);
 }
@@ -94,7 +97,7 @@ void object_dec(Object *obj, bit_t w) {
   obj->count[w]--;
   assert(obj->count[w] >= 0); // : object_to_string(obj);
   if (obj->count[w] == 0 && w == obj->which) {
-    if (obj->count[bit_flip(obj->which)] == 0 && obj->count[2] == 0) {
+    if (obj->count[BIT_FLIP(obj->which)] == 0 && obj->count[2] == 0) {
       object_request_delete(obj);
     } else {
       if (obj->collector == NULL) {
@@ -188,8 +191,8 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   link_t **phantoms = NULL; //Array<link_t*>
   size_t phantoms_size = 0;
 
-  if (obj->count[bit_flip(obj->which)] > 0) {
-    obj->which = bit_flip(obj->which);
+  if (obj->count[BIT_FLIP(obj->which)] > 0) {
+    obj->which ^= 1; /// flip the which bit atomically.
   }
   // phantom count is > 0, but weak and strong are zero.
   if (!obj->phantomized) {
@@ -240,11 +243,11 @@ static void object_rebuild_link(safelist_t* rebuild_next, link_t *const lk) {
   locker_start2(lk->src, lk->target);
   if (lk->phantomized) {
     if (lk->target == lk->src) {
-      lk->which = bit_flip(lk->target->which);
+      lk->which = BIT_FLIP(lk->target->which);
     } else if (lk->target->phantomized || hashtable_size(lk->target->links) == 0) {
       lk->which = lk->target->which;
     } else {
-      lk->which = bit_flip(lk->target->which);
+      lk->which = BIT_FLIP(lk->target->which);
     }
 
     lk->target->count[lk->which]++;
@@ -304,7 +307,7 @@ void object_recover_node(Object *obj, collector_t *cptr) {
       HASHTABLE_FOREACH(entry, obj->links, { rebuild[rebuild_size++] = entry->key; })
     }
   } else {
-    assert(obj->count[bit_flip(obj->which)] == 0);
+    assert(obj->count[BIT_FLIP(obj->which)] == 0);
   }
   locker_end();
 
@@ -417,34 +420,6 @@ bool object_merge_collectors(Object *const obj, Object *target) {
   }
 }
 
-//char *object_to_string(Object *obj) {
-//  locker_start1(obj);
-//  //sprintf(objstr,"#<Object:%p id:%d count:[%d,%d,%d] which:%d collector_id:%d links:%zu deleted:%s marked:%s phantomized:%s>", //|%s",
-//  //        (void*)obj, obj->id, obj->count[0], obj->count[1], obj->count[2],
-//  //       obj->which, cid, hashtable_size(obj->links),
-//  //        (obj->deleted ? "true" : "false"), (obj->mark ? "true" : "false"),
-//  //        (obj->phantomized ? "yes" : "no")); //obj->links->keys());
-//  char links[200] = "[";
-//  if (hashtable_size(obj->links) > 0) {
-//    HASHTABLE_FOREACH(e, obj->links, {
-//      strcat(links, (char *) e->key);
-//      strcat(links, " ");
-//    });
-//    links[strlen(links)-1] = ']';
-//  } else {
-//    strcat(links, "]");
-//  }
-//  snprintf(objstr, OBJSTRLEN, "{%d#[%d,%d,%d][%d] c:%d d=%s%s p=%s l=%s}",
-//           obj->id, obj->count[0], obj->count[1], obj->count[2],
-//           obj->which,
-//           (obj->collector == NULL ? -1 : (int)obj->collector->id),
-//           (obj->deleted ? "X" : "O"),
-//           (obj->mark ? "X" : "O"), (obj->phantomized ? "yes" : "no"),
-//           links);
-//  locker_end();
-//  return objstr;
-//}
-
 Object *object_get(Object *obj, char *field) {
   Object *retval = NULL;
 
@@ -490,13 +465,13 @@ void object_set(Object *obj, char *field, Object *referent) {
     lk->target->count[2]++;
   } else if (lk->target == obj) {
     // self-references *must* be weak
-    lk->which = bit_flip(referent->which);
+    lk->which = BIT_FLIP(referent->which);
     lk->target->count[lk->which]++;
   } else if (hashtable_size(referent->links) == 0) {
     lk->which = referent->which;
     lk->target->count[lk->which]++;
   } else {
-    lk->which = bit_flip(referent->which);
+    lk->which = BIT_FLIP(referent->which);
     lk->target->count[lk->which]++;
   }
   locker_end();

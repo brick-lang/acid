@@ -1,6 +1,7 @@
 #define DEBUG
 #include <assert.h>
 #include <stdatomic.h>
+#include <stdio.h>
 #include "../lib/collectc/include/list.h"
 #include "here.h"
 #include "worker.h"
@@ -338,22 +339,22 @@ int main(int argc, char** argv) {
 
   world_init();
   printf("hello world!\n");
-  simplecycle();
-  simplecycle2();
+//  simplecycle();
+//  simplecycle2();
   wheel();
-  multi_collect();
-  doubly_linked_list();
-  clique();
-  benzene_ring_ms_test();
-  object_set_test();
+//  multi_collect();
+//  doubly_linked_list();
+//  clique();
+//  benzene_ring_ms_test();
+//  object_set_test();
 
-  for (int x = 1; x <= 16; ++x) {
-//    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
-    benzene_ring_scalability(x);
-//    task_wait_for_zero_threads();
-//    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
-//    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
-  }
+//  for (int x = 1; x <= 16; ++x) {
+////    clock_t st = clock() / (CLOCKS_PER_SEC / 1000);
+//    benzene_ring_scalability(x);
+////    task_wait_for_zero_threads();
+////    clock_t e = clock() / (CLOCKS_PER_SEC / 1000);
+////    printf("Total time for %d is %lf\n", x, 0.001*(e-st));
+//  }
 
   task_wait_for_zero_threads();
   world_teardown();

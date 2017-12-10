@@ -8,11 +8,10 @@ extern "C" {
 /**
  * Lock priorities */
 typedef enum {
-  PRIORITY_GLOBAL = 1,
-  PRIORITY_OBJECT = 3,
-  PRIORITY_COLLECTOR = 2,
   PRIORITY_LIST = 0,
-  PRIORITY_COLLECTCOUNTER = -1
+  PRIORITY_GLOBAL = 1,
+  PRIORITY_COLLECTOR = 2,
+  PRIORITY_OBJECT = 3,
 } priority_t;
 
 #ifdef __cplusplus

@@ -8,7 +8,7 @@ link_t *link_create(Object *s) {
   link_t *link = malloc(sizeof(link_t));
   *(Object **)&link->src = s;
   link->target = NULL;
-  link->which = BIT_ZERO;
+  link->which = 0;
   link->phantomized = false;
   return link;
 }

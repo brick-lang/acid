@@ -1,6 +1,5 @@
 add_library( brandtgc
-  bit.c
-  complock.c
+        complock.c
   idbaseobject.c
   wrappedlock.c
   counter.c

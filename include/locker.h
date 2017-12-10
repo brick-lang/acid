@@ -13,7 +13,6 @@ extern "C" {
  * more locks if (1) it doesn't have any yet, or (2) the new locks
  * have lower "priority" than any locks already obtained. */
 typedef struct locker_t {
-  TreeTable *locks;  // TreeMap<complock_t*,int>
   List *stack;       // List<locker_entry_t*>
 } locker_t;
 

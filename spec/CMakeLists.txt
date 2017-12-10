@@ -1,7 +1,3 @@
-add_executable( bit_spec bit_spec.cpp )
-target_link_libraries( bit_spec brandtgc ${CMAKE_THREAD_LIBS_INIT} )
-add_test ( bit_spec bit_spec )
-
 add_executable( idbaseobject_spec idbaseobject_spec.cpp)
 target_link_libraries( idbaseobject_spec brandtgc ${CMAKE_THREAD_LIBS_INIT} )
 add_test ( idbaseobject_spec idbaseobject_spec )

@@ -1,6 +1,5 @@
 #include "../lib/collectc/include/hashtable.h"
 #include "complock.h"
-#include "bit.h"
 #include "safelist.h"
 
 #ifndef OBJECT_H
@@ -10,14 +9,17 @@
 extern "C" {
 #endif
 
+/**
+ * Keeps track of the state of the "which" bit. */
+typedef atomic_uint_fast8_t bit_t;
+
 typedef struct Object {
   const unsigned int id;
   complock_t *lock;
   HashTable *links; // HashTable<String, Link>
   bit_t which;
-  volatile bool phantomized;
-  bool deleted;
-  volatile int count[3];
+  bool phantomized;
+  int count[3];
   struct collector_t *collector;
   bool phantomization_complete;
 } Object;
@@ -25,7 +27,6 @@ typedef struct Object {
 Object *object_create();
 Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
-//char *object_to_string(Object *obj);
 void object_phantomize_node(Object* obj, struct collector_t *cptr);
 void object_recover_node(Object *obj, struct collector_t *cptr);
 void object_inc_strong(Object *obj);

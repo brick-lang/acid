@@ -1,14 +1,13 @@
+#ifndef COMPLOCK_H
+#define COMPLOCK_H
+
 #include <limits.h>
 #ifdef __STDC_NO_THREADS__
 #include "../lib/tinycthread/tinycthread.h"
 #else
 #include <threads.h>
 #endif
-
 #include "priority.h"
-
-#ifndef COMPLOCK_H
-#define COMPLOCK_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,10 +21,8 @@ typedef struct complock_t {
 
 complock_t* complock_create(priority_t priority, unsigned int id);
 void complock_destroy(complock_t* c);
-int complock_compare(const void* c1, const void* c2);
-int complock_hash_code(complock_t* c);
+int complock_compare(const complock_t* c1, const complock_t* c2);
 int complock_equals(complock_t* c1, complock_t* c2);
-//char* complock_to_string(complock_t* c);
 int complock_lock(complock_t* c);
 int complock_unlock(complock_t* c);
 

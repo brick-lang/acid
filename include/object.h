@@ -1,3 +1,4 @@
+#include <stdatomic.h>
 #include "../lib/collectc/include/hashtable.h"
 #include "complock.h"
 #include "safelist.h"

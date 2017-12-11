@@ -2,8 +2,7 @@ add_library( brandtgc
         complock.c
   idbaseobject.c
   wrappedlock.c
-  counter.c
-  locker.c
+        locker.c
   link.c
   object.c collector.c safelist.c task.c root.c worker.c)
 

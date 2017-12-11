@@ -14,8 +14,12 @@ atomic_size_t world_count;
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
   if (obj->collector != c) {
-    if (c != NULL) counter_inc_ref(&c->count);
-    if (obj->collector != NULL) counter_dec_ref(&obj->collector->count);
+    if (c != NULL) {
+      (&c->count)->ref_count++;
+    }
+    if (obj->collector != NULL) {
+      (&obj->collector->count)->ref_count--;
+    }
     obj->collector = c;
   }
   locker_end();
@@ -44,7 +48,7 @@ static void object_del(Object *obj) {
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
   hashtable_destroy(obj->links);
   free(obj);  // free the memory
-  world_count--;
+//  world_count--;
   locker_end();
   complock_destroy(lockobj.cmplock);
 }
@@ -316,7 +320,7 @@ void object_recover_node(Object *obj, collector_t *cptr) {
     for (size_t i = 0; i < rebuild_size; i++) {
       hashtable_get(obj->links, rebuild[i], (void **)&lk);
       assert(lk != NULL);
-      object_rebuild_link(cptr->rebuild_list, lk);
+      object_rebuild_link(&cptr->rebuild_list, lk);
     }
     free(rebuild);
   }
@@ -382,8 +386,8 @@ bool object_merge_collectors(Object *const obj, Object *target) {
 
   while (true) {
     locker_start4(t, s, obj, target);
-    collector_check_not_terminated(t);
-    collector_check_not_terminated(s);
+//    assert(!t->terminated);
+//    assert(!s->terminated);
     if (t->forward == s && s->forward == NULL) {
       object_set_collector(target, s);
       object_set_collector(obj, s);

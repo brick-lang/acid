@@ -1,12 +1,12 @@
-#define DEBUG
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include "../lib/collectc/include/list.h"
-#include "here.h"
 #include "locker.h"
 #include "root.h"
 #include "worker.h"
+
+#define HERE_MSG(msg) (printf("here: %s(%s:%d) %s\n", __func__, strrchr("/" __FILE__, '/') + 1, __LINE__, msg))
 
 static List *keylist = NULL;
 
@@ -335,6 +335,7 @@ void object_set_test() {
 }
 
 extern atomic_size_t world_count;
+extern atomic_size_t num_collector;
 
 int main(int argc, char **argv) {
   struct timespec wall_start;
@@ -377,6 +378,7 @@ int main(int argc, char **argv) {
   double wall_diff_combined =
       wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec);
   printf("Total wall time elapsed: %lf\n", wall_diff_combined);
-  printf("Total number of objects: %zu\n", world_count);
+  printf("Total number of objects in system: %zu\n", world_count);
+  printf("Total number of collectors created: %zu\n", num_collector);
   exit(0);
 }

@@ -3,18 +3,21 @@
 #include "object.h"
 
 safelist_t *safelist_create(counter_t *c) {
-  safelist_t *safelist = malloc(sizeof(safelist_t));
-  *(wrappedlock_t **)&safelist->lock = wrappedlock_create(PRIORITY_LIST);
-  *(counter_t **)&safelist->count = c;
-  list_new((List **)&safelist->data);
-  safelist->_forward = NULL;
-  return safelist;
+  safelist_t *sl = malloc(sizeof(safelist_t));
+  return safelist_init(sl, c);
 }
 
-void safelist_destroy(safelist_t *sl) {
+safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
+  *(wrappedlock_t **)&sl->lock = wrappedlock_create(PRIORITY_LIST);
+  *(counter_t **)&sl->count = c;
+  list_new((List **)&sl->data);
+  sl->_forward = NULL;
+  return sl;
+}
+
+void safelist_deinit(safelist_t *sl) {
   wrappedlock_destroy(sl->lock);
   list_destroy(sl->data);
-  free(sl);
 }
 
 void safelist_add(safelist_t *sl, void *datum) {
@@ -22,7 +25,7 @@ void safelist_add(safelist_t *sl, void *datum) {
 
   locker_start1(sl->lock);
   if (sl->_forward == NULL) {
-    counter_inc_store(sl->count);
+    sl->count->store_count++;
     list_add(sl->data, datum);
   } else {
     f = sl->_forward;
@@ -44,9 +47,7 @@ size_t safelist_size(safelist_t *sl) {
   return retval;
 }
 
-bool safelist_is_empty(safelist_t *sl) {
-  return safelist_size(sl) == 0;
-}
+bool safelist_is_empty(safelist_t *sl) { return safelist_size(sl) == 0; }
 
 void *safelist_poll(safelist_t *sl) {
   void *retval;
@@ -54,7 +55,7 @@ void *safelist_poll(safelist_t *sl) {
   if (list_size(sl->data) == 0) {
     retval = NULL;
   } else {
-    counter_dec_store(sl->count);
+    sl->count->store_count--;
     list_remove_first(sl->data, &retval);
   }
   locker_end();
@@ -65,8 +66,7 @@ void safelist_forward(safelist_t *sl, safelist_t *forward_to) {
   locker_start2(sl->lock, forward_to->lock);
   while (true) {
     Object *obj = safelist_poll(sl);
-    if (obj == NULL)
-      break;
+    if (obj == NULL) break;
     safelist_add(forward_to, obj);
   }
   sl->_forward = forward_to;
@@ -76,6 +76,3 @@ void safelist_forward(safelist_t *sl, safelist_t *forward_to) {
 bool safelist_forwards_to(safelist_t *sl, safelist_t *forward) {
   return sl->_forward == forward;
 }
-
-
-

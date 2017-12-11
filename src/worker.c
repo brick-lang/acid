@@ -5,7 +5,7 @@
 #include <threads.h>
 #endif
 
-#include <assert.h>
+#include <stdatomic.h>
 #include "../lib/collectc/include/list.h"
 #include "locker.h"
 #include "worker.h"
@@ -15,7 +15,7 @@
 static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t work_sychro_mutex;
 static List *work;  // List<task_t>
-static volatile bool endtime = false;
+static atomic_bool endtime = false;
 
 static int worker_run(void *);
 
@@ -38,7 +38,6 @@ void workers_teardown() {
   }
 
   mtx_lock(&work_sychro_mutex);
-  assert(list_size(work) == 0);
   list_destroy(work);
   mtx_unlock(&work_sychro_mutex);
   mtx_destroy(&work_sychro_mutex);

@@ -1,6 +1,6 @@
-#include "complock.h"
 #ifndef LOCKABLE_H
 #define LOCKABLE_H
+#include "complock.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

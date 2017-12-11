@@ -1,9 +1,9 @@
-#include "../lib/collectc/include/list.h"
-#include "counter.h"
-#include "wrappedlock.h"
-
 #ifndef SAFELIST_H
 #define SAFELIST_H
+
+#include "../lib/collectc/include/list.h"
+#include "wrappedlock.h"
+#include "counter.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,7 +20,8 @@ typedef struct safelist_t {
 } safelist_t;
 
 safelist_t *safelist_create(counter_t *c);
-void safelist_destroy(safelist_t *sl);
+safelist_t *safelist_init(safelist_t* sl, counter_t *c);
+void safelist_deinit(safelist_t *sl);
 void safelist_add(safelist_t *sl, void *datum);
 size_t safelist_size(safelist_t *sl);
 bool safelist_is_empty(safelist_t *sl);

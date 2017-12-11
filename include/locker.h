@@ -1,4 +1,3 @@
-#include "../lib/collectc/include/treetable.h"
 #include "../lib/collectc/include/list.h"
 #ifndef LOCKER_H
 #define LOCKER_H

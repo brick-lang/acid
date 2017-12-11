@@ -7,9 +7,13 @@
 #include "lockable.h"
 #include "locker.h"
 
+// TODO: This isn't particularly elegant, but...
+const uint64_t OBJECT_MAGIC_NUMBER = 10943156698286619218u;
+
 #define BIT_FLIP(b) ((b) ^ 1)
 
 atomic_size_t world_count;
+atomic_size_t collect_count;
 
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
@@ -37,6 +41,7 @@ Object *object_init(Object *obj) {
   obj->collector = NULL;
   obj->phantomization_complete = true;
   obj->data = NULL;
+  obj->magic = OBJECT_MAGIC_NUMBER;
   world_count++;
   return obj;
 }
@@ -65,9 +70,10 @@ static void object_del(Object *obj) {
   object_set_collector(obj, NULL);
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
   hashtable_destroy(obj->links);
-  //if (obj->data != NULL) { free(obj->data); }
+  obj->magic = 0;
+  //if (obj->dtor != NULL) { dtor(obj->data); }
   free(obj);  // free the memory
-//  world_count--;
+  collect_count++;
   locker_end();
   complock_destroy(lockobj.cmplock);
 }
@@ -441,18 +447,6 @@ bool object_merge_collectors(Object *const obj, Object *target) {
     }
     locker_end();
   }
-}
-
-Object *object_get(Object *obj, char *field) {
-  Object *retval = NULL;
-
-  locker_start1(obj);
-  link_t *lk = NULL;
-  hashtable_get(obj->links, field, (void **)&lk);
-  if (lk != NULL) retval = lk->target;
-  locker_end();
-
-  return retval;
 }
 
 // Pseudo: LinkSet

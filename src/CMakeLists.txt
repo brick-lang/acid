@@ -9,7 +9,6 @@ add_library(brandtgc
         collector.c
         safelist.c
         task.c
-        root.c
         worker.c)
 
 target_link_libraries(brandtgc collectc tinycthread ${CMAKE_THREAD_LIBS_INIT})

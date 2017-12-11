@@ -1,8 +1,8 @@
 #include "acid.h"
 #include "locker.h"
+#include "object.h"
 #include "task.h"
 #include "worker.h"
-#include "object.h"
 
 void acid_setup() {
   locker_setup();
@@ -25,12 +25,47 @@ void *acid_malloc(size_t alloc_size) {
   // | Object (header) | datum...
   void *fullspace = malloc(sizeof(Object) + alloc_size);
   Object *o = object_init_strong(fullspace);
-  void *data_section = (void *) ((intptr_t)fullspace + sizeof(Object));
+  void *data_section = (void *)((intptr_t)fullspace + sizeof(Object));
   o->data = data_section;
   return data_section;
 }
 
+extern const uint64_t OBJECT_MAGIC_NUMBER;
 void acid_dissolve(void *ptr) {
-  void* addr = (void *) ((intptr_t)ptr - sizeof(Object));
-  object_dec_strong(addr);
+  if (acid_is_managed(ptr)) {
+    Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
+    locker_start1(obj_addr);
+    object_dec_strong(obj_addr);
+    locker_end();
+  }
+}
+
+void acid_dissolve_cleanup(void *ptr) { acid_dissolve(*(void **)ptr); }
+
+// var = val;
+void acid_set_raw(void **var, void *val) {
+  void *varobj = NULL;
+  if (acid_is_managed(*var)) {
+    varobj = acid_get_base_object(*var);
+  }
+
+  locker_start2(val, varobj);
+  if (val != NULL) {
+    object_inc_strong(acid_get_base_object(val));
+  }
+  if (varobj != NULL) {
+    object_dec_strong(varobj);
+  }
+  *var = val;
+  locker_end();
+}
+
+bool acid_is_managed(void *ptr) {
+  return ptr != NULL &&
+         OBJECT_MAGIC_NUMBER == *(uint64_t *)((intptr_t)ptr - sizeof(Object) +
+                                              offsetof(Object, magic));
+}
+
+inline Object *acid_get_base_object(void *ptr) {
+  return (Object *)((intptr_t)ptr - sizeof(Object));
 }

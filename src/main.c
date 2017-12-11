@@ -1,109 +1,63 @@
-//#include <assert.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include "../lib/collectc/include/list.h"
-//#include "locker.h"
-//#include "root.h"
-//#include "worker.h"
 #include "acid.h"
 
-//#define HERE_MSG(msg) (printf("here: %s(%s:%d) %s\n", __func__, strrchr("/" __FILE__, '/') + 1, __LINE__, msg))
-//
-//static List *keylist = NULL;
-//
-//void world_init() {
-//  list_new(&keylist);
-//  locker_setup();
-//  task_setup();
-//  workers_setup();
-//}
-//
-//void world_teardown() {
-//  workers_teardown();
-//  task_teardown();
-//  locker_teardown();
-//  list_destroy_cb(keylist, free);
-//}
-//
-//void simplecycle() {
-//  root_t *a = root_create();
-//  root_t *b = root_create();
-//  root_alloc(a);
-//  root_alloc(b);
-//
-//  object_set(a->ref, "x", b->ref);
-//  object_set(b->ref, "x", a->ref);
-//  object_set(a->ref, "y", a->ref);
-//
-//  root_free(b);
-//  root_free(a);
-//}
-//
-//void simplecycle2() {
-//  root_t *a = root_create();
-//  root_t *b = root_create();
-//
-//  root_alloc(a);
-//  root_alloc(b);
-//
-//  object_set(a->ref, "x", b->ref);
-//  object_set(b->ref, "x", a->ref);
-//
-//  root_free(b);
-//  object_set(a->ref, "y", NULL);
-//
-//  thrd_sleep(&(struct timespec){.tv_nsec = 3000000}, NULL);
-//  root_free(a);
-//}
-//
-//void wheel() {
-//  root_t *wheel = root_create();
-//  root_alloc(wheel);
-//
-//  root_t *prev = root_create();
-//  root_set(prev, wheel->ref);
-//
-//  const int n = 499;
-//  root_t *x = NULL;
-//  for (int i = 0; i <= n; i++) {
-//    x = root_create();
-//    root_alloc(x);
-//    object_set(prev->ref, "next", x->ref);
-//    root_set(prev, x->ref);
-//    if (i == n) object_set(x->ref, "next", wheel->ref);  // close the loop
-//    root_free(x);
-//  }
-//  root_free(prev);
-//
-//  HERE_MSG("Finished creating cycle");
-//
-//  Object *o = NULL;
-//  for (int i = 0; i < 300; i++) {
-//    locker_start1(wheel->ref);
-//    o = object_get(wheel->ref, "next");
-//    locker_end();
-//
-//    locker_start2(wheel->ref, o);
-//    assert(o != NULL);
-//    root_set(wheel, o);
-//    locker_end();
-//  }
-//  task_wait_for_zero_threads();
-//  for (int i = 0; i < 300; i++) {
-//    locker_start1(wheel->ref);
-//    o = object_get(wheel->ref, "next");
-//    locker_end();
-//
-//    locker_start2(wheel->ref, o);
-//    assert(o != NULL);
-//    root_set(wheel, o);
-//    locker_end();
-//  }
-//  root_free(wheel);
-//}
-//
-//void multi_collect() {
+#define HERE_MSG(msg)                                                       \
+  (printf("here: %s(%s:%d) %s\n", __func__, strrchr("/" __FILE__, '/') + 1, \
+          __LINE__, msg))
+
+// static List *keylist = NULL;
+
+typedef struct point_t {
+  void* x;
+  void* y;
+} Point;
+
+void simplecycle() {
+  Point* acid_new(a, sizeof(Point));
+  Point* acid_new(b, sizeof(Point));
+
+  acid_set_field(a, x, b);
+  acid_set_field(b, x, a);
+  acid_set_field(a, y, a);
+}
+
+void simplecycle2() {
+  Point* acid_new(a, sizeof(Point));
+  Point* b = acid_malloc(sizeof(Point));
+
+  acid_set_field(a, x, b);
+  acid_set_field(b, x, a);
+
+  acid_dissolve(b);
+
+  acid_set_field(a, y, NULL);
+}
+
+typedef struct slink {
+  struct slink* next;
+} slink_t;
+
+void wheel() {
+  slink_t* acid_new(wheel, sizeof(slink_t));
+
+  slink_t* prev = NULL;
+  acid_set(prev, wheel);
+
+  const int n = 499;
+  for (int i = 0; i <= n; i++) {
+    slink_t* acid_new(x, sizeof(slink_t));
+    acid_set_field(prev, next, x);
+    acid_set(prev, x);
+    if (i == n) {
+      acid_set_field(x, next, wheel);  // close the loop
+    }
+  }
+  acid_dissolve(prev);
+}
+
+// void multi_collect() {
 //  root_t *a1 = root_create();
 //  root_alloc(a1);
 //  root_t *prev = root_create();
@@ -144,7 +98,7 @@
 //  root_free(a2);
 //}
 //
-//root_t *dlink(Object *o, int n) {
+// root_t *dlink(Object *o, int n) {
 //  root_t *a = root_create();
 //  root_alloc(a);
 //  if (o != NULL) {
@@ -159,7 +113,7 @@
 //  return b;
 //}
 //
-//void doubly_linked_list() {
+// void doubly_linked_list() {
 //  root_t *dl = dlink(NULL, 30);
 //  Object *o = NULL;
 //  while (true) {
@@ -169,8 +123,8 @@
 //  }
 //  root_free(dl);
 //}
-//
-//void clique() {
+
+// void clique() {
 //  int n = 9;
 //  root_t *a[n];
 //  for (int i = 0; i < n; i++) {
@@ -193,8 +147,8 @@
 //    root_free(a[i]);
 //  }
 //}
-//
-//void benzene_ring_scalability(int size) {
+
+// void benzene_ring_scalability(int size) {
 //  int n = size * 16;
 //  root_t *a[n][6];
 //  for (int i = 0; i < n; ++i) {
@@ -238,7 +192,7 @@
 //  }
 //}
 //
-//void benzene_ring_ms_test() {
+// void benzene_ring_ms_test() {
 //  int n = 8;
 //
 //  root_t *a[n][6];
@@ -277,7 +231,7 @@
 //  }
 //}
 //
-//void object_set_test() {
+// void object_set_test() {
 //  int n = 2;
 //
 //  root_t *a[n][6];
@@ -336,10 +290,7 @@
 //  }
 //}
 
-extern atomic_size_t world_count;
-extern atomic_size_t num_collector;
-
-//int main(int argc, char **argv) {
+// int main(int argc, char **argv) {
 //  struct timespec wall_start;
 //  timespec_get(&wall_start, TIME_UTC);
 //  clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
@@ -387,13 +338,60 @@ extern atomic_size_t num_collector;
 
 void test1() {
   int acid_new(*i, sizeof(int));
-  //int *i _cleanup_acid_dissolve_ = acid_malloc(sizeof(int));
+  // int *i _cleanup_acid_dissolve_ = acid_malloc(sizeof(int));
   *i = 42;
 }
+//
+// root_t *dlink(Object *o, int n) {
+//  root_t *a = root_create();
+//  root_alloc(a);
+//  if (o != NULL) {
+//    object_set(o, "next", a->ref);  // forward
+//    object_set(a->ref, "prev", o);  // back
+//    if (n == 0) {
+//      return a;  // base case
+//    }
+//  }
+//  root_t *b = dlink(a->ref, n - 1);
+//  root_free(a);
+//  return b;
+//}
+//
+// void doubly_linked_list() {
+//  root_t *dl = dlink(NULL, 30);
+//  Object *o = NULL;
+//  while (true) {
+//    o = object_get(dl->ref, "prev");
+//    if (o == NULL) break;
+//    root_set(dl, o);
+//  }
+//  root_free(dl);
 
-int main (int argc, char **argv) {
+slink_t* slist_create() {
+  slink_t* acid_new(front, sizeof(slink_t));
+  slink_t* curr = front;
+  for (int i = 0; i < 10; i++) {
+    slink_t* acid_new(next, sizeof(slink_t));
+    acid_set_field(curr, next, next);  // curr->next = next
+    curr = curr->next;
+  }
+  return front;
+}
+
+extern atomic_size_t world_count;
+extern atomic_size_t collect_count;
+
+int main(int argc, char** argv) {
   acid_setup();
   test1();
+  slist_create();
+  simplecycle();
+  simplecycle2();
+  wheel();
+
   acid_teardown_blocking();
+  printf("Total number of objects created: %zu\n", atomic_load(&world_count));
+  printf("Total number of objects collected: %zu\n",
+         atomic_load(&collect_count));
   exit(0);
 }

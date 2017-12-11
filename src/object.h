@@ -23,9 +23,14 @@ typedef struct Object {
   int count[3];
   struct collector_t *collector;
   bool phantomization_complete;
+
+  void *data;
 } Object;
 
 Object *object_create();
+Object *object_init(Object *o);
+Object *object_create_strong();
+Object *object_init_strong(Object *o);
 Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
 void object_phantomize_node(Object *obj, struct collector_t *cptr);

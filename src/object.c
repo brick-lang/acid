@@ -25,8 +25,7 @@ void object_set_collector(Object *obj, collector_t *c) {
   locker_end();
 }
 
-Object *object_create() {
-  Object *obj = malloc(sizeof(Object));
+Object *object_init(Object *obj) {
   idbaseobject_init((IdBaseObject *)obj);
   hashtable_new(&obj->links);
   obj->lock = complock_create(PRIORITY_OBJECT, obj->id);
@@ -37,9 +36,28 @@ Object *object_create() {
   obj->count[2] = 0;
   obj->collector = NULL;
   obj->phantomization_complete = true;
+  obj->data = NULL;
   world_count++;
   return obj;
 }
+
+Object *object_create() {
+  Object *obj = malloc(sizeof(Object));
+  return object_init(obj);
+}
+
+Object *object_create_strong() {
+  Object *o = object_create();
+  object_inc_strong(o);
+  return o;
+}
+
+Object *object_init_strong(Object *o) {
+  object_init(o);
+  object_inc_strong(o);
+  return o;
+}
+
 
 static void object_del(Object *obj) {
   lockable_t lockobj = {.id = 0, .cmplock = obj->lock};
@@ -47,6 +65,7 @@ static void object_del(Object *obj) {
   object_set_collector(obj, NULL);
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
   hashtable_destroy(obj->links);
+  //if (obj->data != NULL) { free(obj->data); }
   free(obj);  // free the memory
 //  world_count--;
   locker_end();

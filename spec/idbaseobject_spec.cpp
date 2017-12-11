@@ -1,6 +1,6 @@
 // Copyright 2016 Katherine Whitlock
 #include "cppspec.hpp"
-#include "idbaseobject.h"
+#include "../src/idbaseobject.h"
 
 describe object_spec("An IdBaseObject", $ {
   IdBaseObject *o = idbaseobject_create();

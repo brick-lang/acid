@@ -30,6 +30,7 @@ void object_set_collector(Object *obj, collector_t *c) {
 }
 
 Object *object_init(Object *obj) {
+  // Internal information
   idbaseobject_init((IdBaseObject *)obj);
   hashtable_new(&obj->links);
   obj->lock = complock_create(PRIORITY_OBJECT, obj->id);
@@ -40,8 +41,12 @@ Object *object_init(Object *obj) {
   obj->count[2] = 0;
   obj->collector = NULL;
   obj->phantomization_complete = true;
+
+  // Storage-related information
+  obj->dtor = NULL;
   obj->data = NULL;
   obj->magic = OBJECT_MAGIC_NUMBER;
+
   world_count++;
   return obj;
 }
@@ -63,7 +68,6 @@ Object *object_init_strong(Object *o) {
   return o;
 }
 
-
 static void object_del(Object *obj) {
   lockable_t lockobj = {.id = 0, .cmplock = obj->lock};
   locker_start1(&lockobj);
@@ -71,7 +75,9 @@ static void object_del(Object *obj) {
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
   hashtable_destroy(obj->links);
   obj->magic = 0;
-  //if (obj->dtor != NULL) { dtor(obj->data); }
+  if (obj->dtor != NULL) {
+    obj->dtor(obj->data);
+  }
   free(obj);  // free the memory
   collect_count++;
   locker_end();
@@ -411,8 +417,8 @@ bool object_merge_collectors(Object *const obj, Object *target) {
 
   while (true) {
     locker_start4(t, s, obj, target);
-//    assert(!t->terminated);
-//    assert(!s->terminated);
+    //    assert(!t->terminated);
+    //    assert(!s->terminated);
     if (t->forward == s && s->forward == NULL) {
       object_set_collector(target, s);
       object_set_collector(obj, s);
@@ -447,6 +453,18 @@ bool object_merge_collectors(Object *const obj, Object *target) {
     }
     locker_end();
   }
+}
+
+Object *object_get(Object *obj, char *field) {
+  Object *retval = NULL;
+
+  locker_start1(obj);
+  link_t *lk = NULL;
+  hashtable_get(obj->links, field, (void **)&lk);
+  if (lk != NULL) retval = lk->target;
+  locker_end();
+
+  return retval;
 }
 
 // Pseudo: LinkSet

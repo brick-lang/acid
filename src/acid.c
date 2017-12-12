@@ -10,15 +10,15 @@ void acid_setup() {
   workers_setup();
 }
 
-void acid_teardown() {
+void acid_teardown_nonblocking() {
   workers_teardown();
   task_teardown();
   locker_teardown();
 }
 
-void acid_teardown_blocking() {
+void acid_teardown() {
   task_wait_for_zero_threads();
-  acid_teardown();
+  acid_teardown_nonblocking();
 }
 
 void *acid_malloc(size_t alloc_size) {
@@ -28,6 +28,12 @@ void *acid_malloc(size_t alloc_size) {
   void *data_section = (void *)((intptr_t)fullspace + sizeof(Object));
   o->data = data_section;
   return data_section;
+}
+
+void *acid_malloc_dtor(size_t alloc_size, void(*dtor)(void*)) {
+  void *mem = acid_malloc(alloc_size);
+  _acid_get_base_object(mem)->dtor = dtor;
+  return mem;
 }
 
 extern const uint64_t OBJECT_MAGIC_NUMBER;
@@ -43,15 +49,16 @@ void acid_dissolve(void *ptr) {
 void acid_dissolve_cleanup(void *ptr) { acid_dissolve(*(void **)ptr); }
 
 // var = val;
-void acid_set_raw(void **var, void *val) {
-  void *varobj = NULL;
+void _acid_set_raw(void **var, void *val) {
+  Object *varobj = NULL;
+  Object *valobj = _acid_get_base_object(val);
   if (acid_is_managed(*var)) {
-    varobj = acid_get_base_object(*var);
+    varobj = _acid_get_base_object(*var);
   }
 
-  locker_start2(val, varobj);
+  locker_start2(valobj, varobj);
   if (val != NULL) {
-    object_inc_strong(acid_get_base_object(val));
+    object_inc_strong(valobj);
   }
   if (varobj != NULL) {
     object_dec_strong(varobj);
@@ -66,6 +73,6 @@ bool acid_is_managed(void *ptr) {
                                               offsetof(Object, magic));
 }
 
-inline Object *acid_get_base_object(void *ptr) {
+inline Object *_acid_get_base_object(void *ptr) {
   return (Object *)((intptr_t)ptr - sizeof(Object));
 }

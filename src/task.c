@@ -15,7 +15,7 @@
 
 static cnd_t zero_threads_cond;
 static mtx_t count_mutex;
-static volatile size_t count = 0;
+static atomic_size_t count = 0;
 
 void task_setup() {
   mtx_init(&count_mutex, mtx_plain);

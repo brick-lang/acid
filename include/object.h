@@ -24,14 +24,16 @@ typedef struct Object {
   struct collector_t *collector;
   bool phantomization_complete;
 
+  void (*dtor)(void *);
   void *data;
-  uint64_t magic; // magic number to determine if an object is GC-tracked
+  uint64_t magic;  // magic number to determine if an object is GC-tracked
 } Object;
 
 Object *object_create();
 Object *object_init(Object *o);
 Object *object_create_strong();
 Object *object_init_strong(Object *o);
+Object *object_get(Object *obj, char *field);
 void object_set(Object *obj, char *field, Object *referent);
 void object_phantomize_node(Object *obj, struct collector_t *cptr);
 void object_recover_node(Object *obj, struct collector_t *cptr);

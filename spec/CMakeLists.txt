@@ -1,5 +1,5 @@
 add_executable( idbaseobject_spec idbaseobject_spec.cpp)
-target_link_libraries( idbaseobject_spec brandtgc ${CMAKE_THREAD_LIBS_INIT} )
+target_link_libraries( idbaseobject_spec acid ${CMAKE_THREAD_LIBS_INIT} )
 add_test ( idbaseobject_spec idbaseobject_spec )
 
 add_custom_target ( spec ${CMAKE_COMMAND} -E env CTEST_OUTPUT_ON_FAILURE=1

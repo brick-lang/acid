@@ -1,4 +1,4 @@
-add_library(brandtgc
+add_library(acid
         acid.c
         complock.c
         idbaseobject.c
@@ -11,11 +11,7 @@ add_library(brandtgc
         task.c
         worker.c)
 
-target_link_libraries(brandtgc collectc tinycthread ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(acid collectc tinycthread ${CMAKE_THREAD_LIBS_INIT})
 if(UNIX)
-    target_link_libraries(brandtgc m)
+    target_link_libraries(acid m)
 endif(UNIX)
-
-
-add_executable( run main.c )
-target_link_libraries( run brandtgc )

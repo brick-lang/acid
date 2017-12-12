@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "acid.h"
+#include "../src/locker.h"
 
 #define HERE_MSG(msg)                                                       \
   (printf("here: %s(%s:%d) %s\n", __func__, strrchr("/" __FILE__, '/') + 1, \
@@ -15,8 +16,8 @@ typedef struct point_t {
 } Point;
 
 void simplecycle() {
-  Point* acid_new(a, sizeof(Point));
-  Point* acid_new(b, sizeof(Point));
+  Point* a _cleanup_acid_dissolve_ = acid_malloc(sizeof(Point));
+  Point* b _cleanup_acid_dissolve_ = acid_malloc(sizeof(Point));
 
   acid_set_field(a, x, b);
   acid_set_field(b, x, a);
@@ -24,7 +25,7 @@ void simplecycle() {
 }
 
 void simplecycle2() {
-  Point* acid_new(a, sizeof(Point));
+  Point* a = acid_malloc(sizeof(Point));
   Point* b = acid_malloc(sizeof(Point));
 
   acid_set_field(a, x, b);
@@ -33,6 +34,7 @@ void simplecycle2() {
   acid_dissolve(b);
 
   acid_set_field(a, y, NULL);
+  acid_dissolve(a);
 }
 
 typedef struct slink {
@@ -40,14 +42,14 @@ typedef struct slink {
 } slink_t;
 
 void wheel() {
-  slink_t* acid_new(wheel, sizeof(slink_t));
+  slink_t* wheel = acid_malloc(sizeof(slink_t));
 
   slink_t* prev = NULL;
   acid_set(prev, wheel);
 
   const int n = 499;
   for (int i = 0; i <= n; i++) {
-    slink_t* acid_new(x, sizeof(slink_t));
+    slink_t* x _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
     acid_set_field(prev, next, x);
     acid_set(prev, x);
     if (i == n) {
@@ -55,6 +57,7 @@ void wheel() {
     }
   }
   acid_dissolve(prev);
+  acid_dissolve(wheel);
 }
 
 // void multi_collect() {
@@ -337,45 +340,54 @@ void wheel() {
 //}
 
 void test1() {
-  int acid_new(*i, sizeof(int));
-  // int *i _cleanup_acid_dissolve_ = acid_malloc(sizeof(int));
+  int *i _cleanup_acid_dissolve_ = acid_malloc(sizeof(int));
   *i = 42;
 }
-//
-// root_t *dlink(Object *o, int n) {
-//  root_t *a = root_create();
-//  root_alloc(a);
-//  if (o != NULL) {
-//    object_set(o, "next", a->ref);  // forward
-//    object_set(a->ref, "prev", o);  // back
-//    if (n == 0) {
-//      return a;  // base case
-//    }
-//  }
-//  root_t *b = dlink(a->ref, n - 1);
-//  root_free(a);
-//  return b;
-//}
-//
-// void doubly_linked_list() {
-//  root_t *dl = dlink(NULL, 30);
-//  Object *o = NULL;
-//  while (true) {
-//    o = object_get(dl->ref, "prev");
-//    if (o == NULL) break;
-//    root_set(dl, o);
-//  }
-//  root_free(dl);
 
-slink_t* slist_create() {
-  slink_t* acid_new(front, sizeof(slink_t));
+typedef struct dlink_t {
+  void* data;
+  struct dlink_t* prev;
+  struct dlink_t* next;
+} dlink_t;
+
+void* wrapper(void* arg) {
+  printf("Eval return!\n");
+  return arg;
+}
+
+dlink_t *dlink(dlink_t* o, int n) {
+  dlink_t *a = acid_malloc(sizeof(dlink_t));
+  if (o != NULL) {
+    acid_set_field(o, next, a);  // forward
+    acid_set_field(a, prev, o);  // back
+    if (n == 0) {
+      return a;  // base case
+    }
+  }
+  dlink_t *b = dlink(a, n - 1);
+  acid_dissolve(a);
+  return b;
+}
+
+void doubly_linked_list() {
+  dlink_t *dl = NULL, *o = NULL;
+  dl = dlink(NULL, 30);
+  while (true) {
+    o = dl->prev;
+    if (o == NULL) break;
+    acid_set(dl, o);
+  }
+  acid_dissolve(dl);
+}
+
+void slist_create() {
+  slink_t* front _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
   slink_t* curr = front;
   for (int i = 0; i < 10; i++) {
-    slink_t* acid_new(next, sizeof(slink_t));
+    slink_t* next _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
     acid_set_field(curr, next, next);  // curr->next = next
     curr = curr->next;
   }
-  return front;
 }
 
 extern atomic_size_t world_count;
@@ -388,8 +400,9 @@ int main(int argc, char** argv) {
   simplecycle();
   simplecycle2();
   wheel();
+  doubly_linked_list();
 
-  acid_teardown_blocking();
+  acid_teardown();
   printf("Total number of objects created: %zu\n", atomic_load(&world_count));
   printf("Total number of objects collected: %zu\n",
          atomic_load(&collect_count));

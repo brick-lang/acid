@@ -1,4 +1,4 @@
-project( BrandtGC )
+project( Acid )
 
 cmake_minimum_required( VERSION 3.1 )
 
@@ -8,9 +8,14 @@ set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Werror")
 set(THREADS_PREFER_PTHREAD_FLAG ON )
 find_package( Threads REQUIRED )
 
-add_subdirectory(lib)
+add_subdirectory( lib )
 include_directories( include )
 add_subdirectory( src )
+
+option ( BUILD_EXAMPLES "Build examples." ON )
+if ( BUILD_EXAMPLES )
+  add_subdirectory( examples )
+endif ( BUILD_EXAMPLES )
 
 option ( BUILD_TESTS "Build tests." ON )
 if ( BUILD_TESTS )

@@ -12,6 +12,10 @@ add_library(acid
         worker.c)
 
 target_link_libraries(acid collectc tinycthread ${CMAKE_THREAD_LIBS_INIT})
-if(UNIX)
-    target_link_libraries(acid m)
-endif(UNIX)
+
+set_target_properties(acid PROPERTIES PUBLIC_HEADER "../include/acid.h")
+
+install(TARGETS acid
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include )

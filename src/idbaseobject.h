@@ -1,9 +1,6 @@
 #ifndef IDBASEOBJECT_H
 #define IDBASEOBJECT_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdbool.h>
 
 // An IdBaseObject is a structure defined by a unique ID.
 typedef struct IdBaseObject {
@@ -13,11 +10,6 @@ typedef struct IdBaseObject {
 IdBaseObject* idbaseobject_create();
 void idbaseobject_init(IdBaseObject*);
 int idbaseobject_hash_code(IdBaseObject* obj);
-int idbaseobject_equals(IdBaseObject* o1, IdBaseObject* o2);
-// char* idbaseobject_to_string(IdBaseObject* o);
-
-#ifdef __cplusplus
-}
-#endif
+bool idbaseobject_equals(IdBaseObject* o1, IdBaseObject* o2);
 
 #endif /* IDBASEOBJECT_H */

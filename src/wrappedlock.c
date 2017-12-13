@@ -1,6 +1,5 @@
-#include "wrappedlock.h"
-#include <assert.h>
 #include <stdlib.h>
+#include "wrappedlock.h"
 #include "idbaseobject.h"
 
 wrappedlock_t* wrappedlock_create(priority_t p) {

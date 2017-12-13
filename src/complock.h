@@ -1,17 +1,13 @@
 #ifndef COMPLOCK_H
 #define COMPLOCK_H
 
-#include <limits.h>
+#include <limits.h>  // Primes __STDC_NO_THREADS__
 #ifdef __STDC_NO_THREADS__
-#include "../lib/tinycthread/tinycthread.h"
+  #include "../lib/tinycthread/tinycthread.h"
 #else
-#include <threads.h>
+  #include <threads.h>
 #endif
 #include "priority.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef struct complock_t {
   const unsigned int id;
@@ -25,9 +21,5 @@ int complock_compare(const complock_t* c1, const complock_t* c2);
 int complock_equals(complock_t* c1, complock_t* c2);
 int complock_lock(complock_t* c);
 int complock_unlock(complock_t* c);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* COMPLOCK_H */

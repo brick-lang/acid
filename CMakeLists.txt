@@ -1,6 +1,9 @@
+cmake_minimum_required( VERSION 3.1 )
 project( Acid )
 
-cmake_minimum_required( VERSION 3.1 )
+set( Acid_VERSION_MAJOR 0 )
+set( Acid_VERSION_MINOR 1 )
+
 
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -pedantic -Wall -Werror" )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Werror")

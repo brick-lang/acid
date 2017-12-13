@@ -1,6 +1,7 @@
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "../src/locker.h"
 #include "acid.h"
 

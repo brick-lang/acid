@@ -1,11 +1,6 @@
-#include <stdbool.h>
-
 #ifndef TASK_H
 #define TASK_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdbool.h>
 
 typedef struct task_t {
   bool (*run)(void *);
@@ -20,9 +15,5 @@ size_t task_get_thread_count();
 bool task_wait_for_zero_threads();
 void task_run(task_t *task);
 void task_destroy(task_t *task);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // TASK_H

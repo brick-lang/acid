@@ -1,5 +1,5 @@
-#include "complock.h"
 #include <stdlib.h>
+#include "complock.h"
 
 complock_t* complock_create(priority_t priority, unsigned int id) {
   complock_t* complock = malloc(sizeof(complock_t));

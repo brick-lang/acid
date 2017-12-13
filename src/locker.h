@@ -2,10 +2,6 @@
 #ifndef LOCKER_H
 #define LOCKER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * The locker manages locks in a way that keeps the code safe
  * from deadlocks and other bad behavior. A thread can only obtain
@@ -24,9 +20,5 @@ void locker_start2(void *lock1, void *lock2);
 void locker_start3(void *lock1, void *lock2, void *lock3);
 void locker_start4(void *lock1, void *lock2, void *lock3, void *lock4);
 void locker_end();
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // LOCKER_H

@@ -1,11 +1,7 @@
-#include "complock.h"
-
 #ifndef WRAPPEDLOCK_H
 #define WRAPPEDLOCK_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "complock.h"
 
 /**
  * wrappedlock_t conforms to the 'Lockable' interface, i.e. it has a complock_t*
@@ -19,9 +15,5 @@ typedef struct wrappedlock_t {
 
 wrappedlock_t *wrappedlock_create(priority_t p);
 void wrappedlock_destroy(wrappedlock_t *wl);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // WRAPPEDLOCK_H

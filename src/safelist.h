@@ -5,10 +5,6 @@
 #include "wrappedlock.h"
 #include "counter.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * A list of Objects that can only be accessed with Locks.
  */
@@ -28,9 +24,5 @@ bool safelist_is_empty(safelist_t *sl);
 void *safelist_poll(safelist_t *sl);
 void safelist_forward(safelist_t *sl, safelist_t *forward_to);
 bool safelist_forwards_to(safelist_t *sl, safelist_t *forward);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // SAFELIST_H

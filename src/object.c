@@ -1,11 +1,12 @@
-#include "object.h"
 #include <assert.h>
-#include <stdatomic.h>
+
+#include "object.h"
 #include "collector.h"
 #include "idbaseobject.h"
 #include "link.h"
 #include "lockable.h"
 #include "locker.h"
+#include "task.h"
 
 // TODO: This isn't particularly elegant, but...
 const uint64_t OBJECT_MAGIC_NUMBER = 10943156698286619218u;

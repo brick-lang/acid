@@ -1,14 +1,10 @@
-#include <stdatomic.h>
-#include "../lib/collectc/include/hashtable.h"
-#include "../src/complock.h"
-#include "../src/safelist.h"
-
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdatomic.h>
+#include "../lib/collectc/include/hashtable.h"
+#include "complock.h"
+#include "safelist.h"
 
 /**
  * Keeps track of the state of the "which" bit. */

@@ -16,6 +16,12 @@ const uint64_t OBJECT_MAGIC_NUMBER = 10943156698286619218u;
 atomic_size_t world_count;
 atomic_size_t collect_count;
 
+size_t hashtable_hash_offset(const void *key, int len, uint32_t seed) {
+  (void) len;
+  (void) seed;
+  return (size_t)key;
+}
+
 void object_set_collector(Object *obj, collector_t *c) {
   locker_start1(obj);
   if (obj->collector != c) {
@@ -33,7 +39,13 @@ void object_set_collector(Object *obj, collector_t *c) {
 Object *object_init(Object *obj) {
   // Internal information
   idbaseobject_init((IdBaseObject *)obj);
-  hashtable_new(&obj->links);
+
+  HashTableConf htc = {0};
+  hashtable_conf_init(&htc);
+  htc.hash = hashtable_hash_offset;
+  htc.key_compare = cc_common_cmp_ptr;
+  hashtable_new_conf(&htc, &obj->links);
+
   obj->lock = complock_create(PRIORITY_OBJECT, obj->id);
   obj->which = 0;
   obj->phantomized = false;
@@ -456,12 +468,12 @@ bool object_merge_collectors(Object *const obj, Object *target) {
   }
 }
 
-Object *object_get(Object *obj, char *field) {
+Object *object_get(Object *obj, size_t field_offset) {
   Object *retval = NULL;
 
   locker_start1(obj);
   link_t *lk = NULL;
-  hashtable_get(obj->links, field, (void **)&lk);
+  hashtable_get(obj->links, (void *) field_offset, (void **)&lk);
   if (lk != NULL) retval = lk->target;
   locker_end();
 
@@ -469,14 +481,14 @@ Object *object_get(Object *obj, char *field) {
 }
 
 // Pseudo: LinkSet
-void object_set(Object *obj, char *field, Object *referent) {
+void object_set(Object *obj, size_t field_offset, Object *referent) {
   link_t *old_link = NULL;
 
   locker_start2(obj, referent);
-  hashtable_get(obj->links, field, (void **)&old_link);
+  hashtable_get(obj->links, (void *) field_offset, (void **)&old_link);
 
   if (referent == NULL) {
-    hashtable_remove(obj->links, field, NULL);
+    hashtable_remove(obj->links, (void *) field_offset, NULL);
     locker_end();
     if (old_link != NULL) link_dec(old_link);
     return;
@@ -490,7 +502,7 @@ void object_set(Object *obj, char *field, Object *referent) {
   }
 
   link_t *lk = link_create(obj);
-  hashtable_add(obj->links, field, lk);
+  hashtable_add(obj->links, (void *) field_offset, lk);
   lk->target = referent;
 
   if (obj->phantomized) {

@@ -28,6 +28,8 @@ describe object_spec("An IdBaseObject", $ {
     expect((bool)idbaseobject_equals(o,o2)).to_be_false();
     free(o2);
   });
+
+  free(o);
 });
 
 int main() {

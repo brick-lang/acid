@@ -12,8 +12,8 @@ const uint64_t OBJECT_MAGIC_NUMBER = 10943156698286619218u;
 
 #define BIT_FLIP(b) ((b) ^ 1)
 
-atomic_size_t world_count;
-atomic_size_t collect_count;
+atomic_uint_fast64_t acid_world_count;
+atomic_uint_fast64_t acid_collect_count;
 
 size_t hashtable_hash_offset(const void *key, int len, uint32_t seed) {
   (void) len;
@@ -56,7 +56,7 @@ Object *object_init(Object *obj) {
   obj->data = NULL;
   obj->magic = OBJECT_MAGIC_NUMBER;
 
-  world_count++;
+  acid_world_count++;
   return obj;
 }
 
@@ -88,7 +88,7 @@ static void object_del(Object *obj) {
     obj->dtor(obj->data);
   }
   free(obj);  // free the memory
-  collect_count++;
+  acid_collect_count++;
   locker_end();
   complock_destroy(lockobj.cmplock);
 }

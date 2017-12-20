@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef void *acid_t;
+typedef const void *acid_t;
 
 struct acid_header_t;  // forward declaration
 extern void object_set(struct acid_header_t *, size_t, struct acid_header_t *);
@@ -33,7 +33,7 @@ void acid_dissolve(acid_t acid_ptr);
 void acid_dissolve_cleanup(void *acid_ptr);
 void acid_retain(acid_t acid_ptr);
 
-bool acid_is_managed(void *ptr);
+bool acid_is_managed(const void *ptr);
 void _acid_set_raw(acid_t *var, acid_t acid_val);
 struct acid_header_t *_acid_get_header(acid_t acid_ptr);
 

@@ -37,7 +37,7 @@ void *acid_malloc_dtor(size_t alloc_size, void(*dtor)(void*)) {
 }
 
 extern const uint64_t OBJECT_MAGIC_NUMBER;
-void acid_dissolve(void *ptr) {
+void acid_dissolve(const void *ptr) {
   if (acid_is_managed(ptr)) {
     Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
     locker_start1(obj_addr);
@@ -48,7 +48,7 @@ void acid_dissolve(void *ptr) {
 
 void acid_dissolve_cleanup(void *ptr) { acid_dissolve(*(void **)ptr); }
 
-void acid_retain(acid_t ptr) {
+void acid_retain(const void* ptr) {
   if (acid_is_managed(ptr)) {
     Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
     locker_start1(obj_addr);
@@ -58,7 +58,7 @@ void acid_retain(acid_t ptr) {
 }
 
 // var = val;
-void _acid_set_raw(void **var, void *val) {
+void _acid_set_raw(const void **var, const void *val) {
   Object *varobj = NULL;
   Object *valobj = _acid_get_header(val);
   if (acid_is_managed(*var)) {
@@ -76,12 +76,12 @@ void _acid_set_raw(void **var, void *val) {
   locker_end();
 }
 
-bool acid_is_managed(void *ptr) {
+bool acid_is_managed(const void *ptr) {
   return ptr != NULL &&
          OBJECT_MAGIC_NUMBER == *(uint64_t *)((intptr_t)ptr - sizeof(Object) +
                                               offsetof(Object, magic));
 }
 
-inline Object *_acid_get_header(void *ptr) {
+inline Object *_acid_get_header(const void *ptr) {
   return (Object *)((intptr_t)ptr - sizeof(Object));
 }

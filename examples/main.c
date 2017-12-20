@@ -310,8 +310,8 @@ void slist_create() {
   }
 }
 
-extern atomic_size_t world_count;
-extern atomic_size_t collect_count;
+extern atomic_uint_fast64_t acid_world_count;
+extern atomic_uint_fast64_t acid_collect_count;
 
 int main(int argc, char** argv) {
   struct timespec wall_start;
@@ -349,7 +349,7 @@ int main(int argc, char** argv) {
   };
   printf("Total cpu time elasped: %lf\n", 0.001 * (end - start));
   printf("Total wall time elapsed: %lf\n",  wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec));
-  printf("Total number of objects created: %zu\n", world_count);
-  printf("Total number of objects collected: %zu\n", collect_count);
+  printf("Total number of objects created: %zu\n", acid_world_count);
+  printf("Total number of objects collected: %zu\n", acid_collect_count);
   exit(0);
 }

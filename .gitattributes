@@ -1,0 +1,3 @@
+*.h linguist-language=C
+lib/* linguist-vendored
+spec/cppspec.hpp linguist-vendored

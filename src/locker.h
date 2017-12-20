@@ -1,6 +1,6 @@
-#include "../lib/collectc/list.h"
 #ifndef LOCKER_H
 #define LOCKER_H
+#include "../lib/collectc/list.h"
 
 /**
  * The locker manages locks in a way that keeps the code safe

@@ -8,7 +8,7 @@ safelist_t *safelist_create(counter_t *c) {
 }
 
 safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
-  *(wrappedlock_t **)&sl->lock = wrappedlock_create(PRIORITY_LIST);
+  *(complock_t **)&sl->lock = complock_create(PRIORITY_LIST);
   *(counter_t **)&sl->count = c;
   list_new((List **)&sl->data);
   sl->_forward = NULL;
@@ -16,14 +16,13 @@ safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
 }
 
 void safelist_deinit(safelist_t *sl) {
-  wrappedlock_destroy(sl->lock);
   list_destroy(sl->data);
 }
 
 void safelist_add(safelist_t *sl, void *datum) {
   safelist_t *f = NULL;
 
-  locker_start1(sl->lock);
+  locker_start1(sl);
   if (sl->_forward == NULL) {
     sl->count->store_count++;
     list_add(sl->data, datum);
@@ -41,7 +40,7 @@ void safelist_add(safelist_t *sl, void *datum) {
 }
 size_t safelist_size(safelist_t *sl) {
   size_t retval;
-  locker_start1(sl->lock);
+  locker_start1(sl);
   retval = list_size(sl->data);
   locker_end();
   return retval;
@@ -51,7 +50,7 @@ bool safelist_is_empty(safelist_t *sl) { return safelist_size(sl) == 0; }
 
 void *safelist_poll(safelist_t *sl) {
   void *retval;
-  locker_start1(sl->lock);
+  locker_start1(sl);
   if (list_size(sl->data) == 0) {
     retval = NULL;
   } else {
@@ -63,7 +62,7 @@ void *safelist_poll(safelist_t *sl) {
 }
 
 void safelist_forward(safelist_t *sl, safelist_t *forward_to) {
-  locker_start2(sl->lock, forward_to->lock);
+  locker_start2(sl, forward_to);
   while (true) {
     Object *obj = safelist_poll(sl);
     if (obj == NULL) break;

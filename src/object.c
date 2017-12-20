@@ -3,7 +3,6 @@
 #include "object.h"
 #include "collector.h"
 #include "link.h"
-#include "lockable.h"
 #include "locker.h"
 #include "task.h"
 

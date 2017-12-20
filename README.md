@@ -1,4 +1,4 @@
-# Acid [![Build Status](https://travis-ci.org/brick-lang/brandt-gc.svg?branch=master)](https://travis-ci.org/brick-lang/brandt-gc)
+# Acid [![Build Status](https://travis-ci.org/brick-lang/acid.svg?branch=master)](https://travis-ci.org/brick-lang/acid)
 ### A multithreaded, concurrent GC with industrial-strength object-dissolving action
 
 Acid is an implementation of the Brandt reference-counting GC algorithm in C, specifically developed for

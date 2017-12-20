@@ -2,14 +2,15 @@
 #define SAFELIST_H
 
 #include "../lib/collectc/include/list.h"
-#include "wrappedlock.h"
+#include "complock.h"
 #include "counter.h"
 
 /**
  * A list of Objects that can only be accessed with Locks.
+ * Conforms to lockable_t interface
  */
 typedef struct safelist_t {
-  wrappedlock_t *const lock;
+  complock_t *const lock;
   counter_t *const count;
   List *const data;  // List<Object>
   struct safelist_t *_forward;

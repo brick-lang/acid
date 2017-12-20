@@ -349,8 +349,7 @@ int main(int argc, char** argv) {
   };
   printf("Total cpu time elasped: %lf\n", 0.001 * (end - start));
   printf("Total wall time elapsed: %lf\n",  wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec));
-  printf("Total number of objects created: %zu\n", atomic_load(&world_count));
-  printf("Total number of objects collected: %zu\n",
-         atomic_load(&collect_count));
+  printf("Total number of objects created: %zu\n", world_count);
+  printf("Total number of objects collected: %zu\n", collect_count);
   exit(0);
 }

@@ -11,7 +11,6 @@
 #include "locker.h"
 #include "task.h"
 #include "worker.h"
-#include "wrappedlock.h"
 
 static cnd_t zero_threads_cond;
 static mtx_t count_mutex;

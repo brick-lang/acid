@@ -9,14 +9,15 @@
 
 typedef struct collector_t {
   complock_t lock; // part of the 'lockable' interface.
-  struct collector_t *forward;
-
   counter_t count;
+
   safelist_t collect;
   safelist_t merged_list;
   safelist_t recovery_list;
   safelist_t rebuild_list;
   safelist_t clean_list;
+
+  struct collector_t *forward;
 } collector_t;
 
 collector_t *collector_create();

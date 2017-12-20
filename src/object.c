@@ -132,17 +132,15 @@ void object_dec(Object *obj, bit_t w) {
   assert(obj->count[w] >= 0);  // : object_to_string(obj);
   if (obj->count[w] == 0 && w == obj->which) {
     if (obj->count[BIT_FLIP(obj->which)] == 0 && obj->count[2] == 0) {
+      // No strong, weak, or phantom counts. Let's delete.
       object_request_delete(obj);
     } else {
+      // Set up a collector if one doesn't exist
       if (obj->collector == NULL) {
         object_set_collector(obj, collector_create());
-        collector_add_object(obj->collector, obj);
-
-        // create and start a new collection task
         task_start(task_create(collector_run, obj->collector));
-      } else {
-        collector_add_object(obj->collector, obj);
       }
+      collector_add_object(obj->collector, obj);
     }
   }
   locker_end();

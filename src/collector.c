@@ -66,7 +66,7 @@ void collector_add_object(collector_t *collector, Object *obj) {
       continue;
     }
     obj->count[obj->which]++;
-    obj->count[2]++;  // to this here rather than phantomize_node
+    obj->count[2]++;  // do this here rather than phantomize_node
     // the reason is because a phantom count of one prevents
     // the collector from being set to null
     safelist_add(&add_to->collect, obj);

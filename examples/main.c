@@ -85,8 +85,8 @@ void wheel() {
 //  }
 //  HERE_MSG("Second chain created");
 //
-//  object_set(_acid_get_base_object(prev), "n", _acid_get_base_object(a2));
-//  object_set(_acid_get_base_object(prev), "m", _acid_get_base_object(a1));
+//  object_set(_acid_get_header(prev), "n", _acid_get_header(a2));
+//  object_set(_acid_get_header(prev), "m", _acid_get_header(a1));
 //  HERE_MSG("Chains joined");
 //
 //  acid_dissolve(a1);
@@ -114,7 +114,7 @@ void clique() {
     }
   }
 
-//  HASHTABLE_FOREACH(entry, _acid_get_base_object(a[0])->links, { printf("%zu\n", (size_t)entry->key); })
+//  HASHTABLE_FOREACH(entry, _acid_get_header(a[0])->links, { printf("%zu\n", (size_t)entry->key); })
 
   for (int i = EDGE_COUNT - 1; i >= 0; i--) {
     acid_dissolve(a[i]);
@@ -139,10 +139,10 @@ void clique() {
 //  }
 //
 //  for (int i = 0; i < n - 1; ++i) {
-//    object_set(_acid_get_base_object(a[i][1]), "next1", _acid_get_base_object(a[i + 1][5]));
+//    object_set(_acid_get_header(a[i][1]), "next1", _acid_get_header(a[i + 1][5]));
 //  }
 //  for (int i = n - 1; i > 0; --i) {
-//    object_set(_acid_get_base_object(a[i][4]), "next2", _acid_get_base_object(a[i - 1][2]));
+//    object_set(_acid_get_header(a[i][4]), "next2", _acid_get_header(a[i - 1][2]));
 //  }
 //
 //  for (int i = 0; i < n; ++i) {

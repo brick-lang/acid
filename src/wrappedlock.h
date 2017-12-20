@@ -8,7 +8,6 @@
  * at 'cmplock';
  */
 typedef struct wrappedlock_t {
-  const unsigned int id;
   complock_t *cmplock;
   cnd_t cond;
 } wrappedlock_t;

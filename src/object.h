@@ -10,8 +10,7 @@
  * Keeps track of the state of the "which" bit. */
 typedef atomic_uint_fast8_t bit_t;
 
-typedef struct Object {
-  const unsigned int id;
+typedef struct acid_header_t {
   complock_t *lock;
   HashTable *links;  // HashTable<String, Link>
   bit_t which;
@@ -40,9 +39,5 @@ void object_dec_strong(Object *obj);
 void object_clean_node(Object *obj);
 bool object_merge_collectors(Object *obj, Object *target);
 void object_set_collector(Object *obj, struct collector_t *c);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // OBJECT_H

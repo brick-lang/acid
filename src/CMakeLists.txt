@@ -1,7 +1,6 @@
 add_library(acid
         acid.c
         complock.c
-        idbaseobject.c
         wrappedlock.c
         locker.c
         link.c

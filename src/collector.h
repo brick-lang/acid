@@ -8,7 +8,6 @@
 #include "object.h"
 
 typedef struct collector_t {
-  const unsigned int id;  // placeholder as lockable inherits Object
   complock_t *const lock; // part of the 'lockable' interface.
   struct collector_t *forward;
 

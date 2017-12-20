@@ -2,7 +2,6 @@
 
 #include "object.h"
 #include "collector.h"
-#include "idbaseobject.h"
 #include "link.h"
 #include "lockable.h"
 #include "locker.h"
@@ -37,16 +36,13 @@ void object_set_collector(Object *obj, collector_t *c) {
 }
 
 Object *object_init(Object *obj) {
-  // Internal information
-  idbaseobject_init((IdBaseObject *)obj);
-
   HashTableConf htc = {0};
   hashtable_conf_init(&htc);
   htc.hash = hashtable_hash_offset;
   htc.key_compare = cc_common_cmp_ptr;
   hashtable_new_conf(&htc, &obj->links);
 
-  obj->lock = complock_create(PRIORITY_OBJECT, obj->id);
+  obj->lock = complock_create(PRIORITY_OBJECT);
   obj->which = 0;
   obj->phantomized = false;
   obj->count[0] = 0;
@@ -82,7 +78,7 @@ Object *object_init_strong(Object *o) {
 }
 
 static void object_del(Object *obj) {
-  lockable_t lockobj = {.id = 0, .cmplock = obj->lock};
+  lockable_t lockobj = {.cmplock = obj->lock};
   locker_start1(&lockobj);
   object_set_collector(obj, NULL);
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links

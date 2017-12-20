@@ -1,11 +1,9 @@
 #include <stdlib.h>
 #include "wrappedlock.h"
-#include "idbaseobject.h"
 
 wrappedlock_t* wrappedlock_create(priority_t p) {
   wrappedlock_t* wrappedlock = malloc(sizeof(wrappedlock_t));
-  idbaseobject_init((IdBaseObject*)wrappedlock);
-  wrappedlock->cmplock = complock_create(p, wrappedlock->id);
+  wrappedlock->cmplock = complock_create(p);
   cnd_init(&wrappedlock->cond);
   return wrappedlock;
 }

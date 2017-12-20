@@ -1,9 +1,12 @@
 #include <stdlib.h>
+#include <stdatomic.h>
 #include "complock.h"
 
-complock_t* complock_create(priority_t priority, unsigned int id) {
+static atomic_uint_fast64_t id_count = 1;
+
+complock_t* complock_create(priority_t priority) {
   complock_t* complock = malloc(sizeof(complock_t));
-  *(unsigned int*)&complock->id = id;
+  *(uint_fast64_t *)&complock->id = id_count++;
   complock->priority = priority;
 
   // FIXME: check this return value to make sure everything's alright

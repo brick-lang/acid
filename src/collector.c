@@ -1,6 +1,5 @@
 #include "collector.h"
 #include <assert.h>
-#include "idbaseobject.h"
 #include "locker.h"
 #include "object.h"
 
@@ -8,7 +7,6 @@ atomic_size_t num_collector = 0;
 
 collector_t *collector_create() {
   collector_t *collector = malloc(sizeof(collector_t));
-  idbaseobject_init((IdBaseObject *)collector);
   collector->forward = NULL;
   collector->count.ref_count = 0;
   collector->count.store_count = 0;
@@ -18,7 +16,7 @@ collector_t *collector_create() {
   safelist_init(&collector->rebuild_list, &collector->count);
   safelist_init(&collector->clean_list, &collector->count);
 
-  *(complock_t **)&collector->lock = complock_create(PRIORITY_COLLECTOR, collector->id);
+  *(complock_t **)&collector->lock = complock_create(PRIORITY_COLLECTOR);
   num_collector++;
   return collector;
 }

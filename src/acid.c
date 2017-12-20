@@ -32,7 +32,7 @@ void *acid_malloc(size_t alloc_size) {
 
 void *acid_malloc_dtor(size_t alloc_size, void(*dtor)(void*)) {
   void *mem = acid_malloc(alloc_size);
-  _acid_get_base_object(mem)->dtor = dtor;
+  _acid_get_header(mem)->dtor = dtor;
   return mem;
 }
 
@@ -51,9 +51,9 @@ void acid_dissolve_cleanup(void *ptr) { acid_dissolve(*(void **)ptr); }
 // var = val;
 void _acid_set_raw(void **var, void *val) {
   Object *varobj = NULL;
-  Object *valobj = _acid_get_base_object(val);
+  Object *valobj = _acid_get_header(val);
   if (acid_is_managed(*var)) {
-    varobj = _acid_get_base_object(*var);
+    varobj = _acid_get_header(*var);
   }
 
   locker_start2(valobj, varobj);
@@ -73,6 +73,6 @@ bool acid_is_managed(void *ptr) {
                                               offsetof(Object, magic));
 }
 
-inline Object *_acid_get_base_object(void *ptr) {
+inline Object *_acid_get_header(void *ptr) {
   return (Object *)((intptr_t)ptr - sizeof(Object));
 }

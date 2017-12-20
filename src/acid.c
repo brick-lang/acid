@@ -48,6 +48,15 @@ void acid_dissolve(void *ptr) {
 
 void acid_dissolve_cleanup(void *ptr) { acid_dissolve(*(void **)ptr); }
 
+void acid_retain(acid_t ptr) {
+  if (acid_is_managed(ptr)) {
+    Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
+    locker_start1(obj_addr);
+    object_inc_strong(obj_addr);
+    locker_end();
+  }
+}
+
 // var = val;
 void _acid_set_raw(void **var, void *val) {
   Object *varobj = NULL;

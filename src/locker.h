@@ -1,4 +1,4 @@
-#include "../lib/collectc/include/list.h"
+#include "../lib/collectc/list.h"
 #ifndef LOCKER_H
 #define LOCKER_H
 

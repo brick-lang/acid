@@ -1,7 +1,7 @@
 #ifndef SAFELIST_H
 #define SAFELIST_H
 
-#include "../lib/collectc/include/list.h"
+#include "../lib/collectc/list.h"
 #include "complock.h"
 #include "counter.h"
 

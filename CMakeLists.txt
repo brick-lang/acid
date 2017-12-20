@@ -12,7 +12,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON )
 find_package( Threads REQUIRED )
 
 add_subdirectory( lib )
-include_directories( include )
+include_directories( include lib )
 add_subdirectory( src )
 
 option ( BUILD_EXAMPLES "Build examples." ON )

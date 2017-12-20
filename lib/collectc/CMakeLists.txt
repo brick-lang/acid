@@ -1,5 +1,3 @@
-file(GLOB source_files "src/*.c")
-file(GLOB header_files "include/*.h")
+file(GLOB source_files "*.c")
 
-include_directories(include)
-add_library(collectc STATIC ${source_files})
+add_library(collectc OBJECT ${source_files})

@@ -4,7 +4,7 @@
 #include <time.h>
 #include "../src/locker.h"
 #include "acid.h"
-#include "../lib/collectc/include/hashtable.h"
+#include "../lib/collectc/hashtable.h"
 
 #define HERE_MSG(msg)                                                       \
   (printf("here: %s(%s:%d) %s\n", __func__, strrchr("/" __FILE__, '/') + 1, \

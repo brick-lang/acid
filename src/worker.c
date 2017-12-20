@@ -1,12 +1,12 @@
 #include <limits.h>
 #ifdef __STDC_NO_THREADS__
-#include "../lib/tinycthread/tinycthread.h"
+#include "tinycthread/tinycthread.h"
 #else
 #include <threads.h>
 #endif
 
 #include <stdatomic.h>
-#include "../lib/collectc/include/list.h"
+#include "../lib/collectc/list.h"
 #include "locker.h"
 #include "worker.h"
 

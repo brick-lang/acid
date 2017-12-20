@@ -1,2 +1,1 @@
-include_directories(.)
-add_library(tinycthread STATIC tinycthread.c)
+add_library(tinycthread OBJECT tinycthread.c)

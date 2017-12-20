@@ -3,7 +3,7 @@
 
 #include <limits.h>  // Primes __STDC_NO_THREADS__
 #ifdef __STDC_NO_THREADS__
-  #include "../lib/tinycthread/tinycthread.h"
+  #include "tinycthread/tinycthread.h"
 #else
   #include <threads.h>
 #endif

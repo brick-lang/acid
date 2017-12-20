@@ -2,7 +2,7 @@
 #define OBJECT_H
 
 #include <stdatomic.h>
-#include "../lib/collectc/include/hashtable.h"
+#include "../lib/collectc/hashtable.h"
 #include "complock.h"
 #include "safelist.h"
 

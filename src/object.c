@@ -78,8 +78,7 @@ Object *object_init_strong(Object *o) {
 }
 
 static void object_del(Object *obj) {
-  lockable_t lockobj = {.cmplock = obj->lock};
-  locker_start1(&lockobj);
+  locker_start1(&obj->lock);
   object_set_collector(obj, NULL);
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
   hashtable_destroy(obj->links);
@@ -87,15 +86,13 @@ static void object_del(Object *obj) {
   if (obj->dtor != NULL) {
     obj->dtor(obj->data);
   }
+  locker_end();
+  complock_destroy(obj->lock);
   free(obj);  // free the memory
   acid_collect_count++;
-  locker_end();
-  complock_destroy(lockobj.cmplock);
 }
 
-// Pseudo: Delete
-static void object_die(Object *obj) {
-  // TODO: Get rid of needing this (do destruction in the HASHTABLE_FOREACH)
+static void object_remove_links(Object *obj) {
   link_t **lks = NULL;  // Array<link_t*>
   size_t lks_size = 0;
 
@@ -107,7 +104,6 @@ static void object_die(Object *obj) {
   hashtable_remove_all(obj->links);
   assert(obj->count[0] == 0);
   assert(obj->count[1] == 0);
-  bool has_phantoms = (obj->count[2] > 0);
   locker_end();
 
   if (lks != NULL && lks_size > 0) {
@@ -116,22 +112,18 @@ static void object_die(Object *obj) {
     }
     free(lks);
   }
-
-  if (!has_phantoms) {
-    object_del(obj);
-  }
 }
 
-static bool __object_request_delete_task_run(void *obj) {
-  object_die(obj);
+// Pseudo: Delete
+static bool _object_request_delete_task_run(void *obj) {
+  object_remove_links(obj);
+  // assert(obj->count[2] == 0)
+  object_del(obj);
   return false;  // Don't run this operation again.
 }
 
-static void object_request_delete(Object *const obj) {
-  task_t *task = malloc(sizeof(task_t));
-  task->run = __object_request_delete_task_run;
-  task->runarg = obj;
-  task_start(task);
+static inline void object_request_delete(Object *const obj) {
+  task_start(task_create(_object_request_delete_task_run, obj));
 }
 
 void object_dec(Object *obj, bit_t w) {
@@ -147,10 +139,7 @@ void object_dec(Object *obj, bit_t w) {
         collector_add_object(obj->collector, obj);
 
         // create and start a new collection task
-        task_t *task = task_create();
-        task->run = collector_run;
-        task->runarg = obj->collector;
-        task_start(task);
+        task_start(task_create(collector_run, obj->collector));
       } else {
         collector_add_object(obj->collector, obj);
       }
@@ -377,23 +366,22 @@ void object_recover_node(Object *obj, collector_t *cptr) {
  *
  * After deleting all the outgoing links, decrement
  * the phantom count by one (i.e. the reference held
- * by the collector itself). Wehn the last phantom
- * count is gone, the object is cleaned up.
+ * by the collector itself). When the last phantom
+ * count is gone, the object is cleaned up (in decPhantom)
  *
  * @param obj the Object to clean
  */
 void object_clean_node(Object *obj) {
-  bool die = false;
+  bool in_use = true;
   locker_start1(obj);
   assert(obj->count[0] >= 0);
   assert(obj->count[1] >= 0);
-  if (obj->count[0] == 0 && obj->count[1] == 0) {
-    die = true;
-  }
+  in_use = (obj->count[0] != 0 || obj->count[1] != 0);
   locker_end();
 
-  if (die) object_die(obj);
-
+  if (!in_use) {
+    object_remove_links(obj);
+  }
   object_dec_phantom(obj);
 }
 
@@ -426,8 +414,6 @@ bool object_merge_collectors(Object *const obj, Object *target) {
 
   while (true) {
     locker_start4(t, s, obj, target);
-    //    assert(!t->terminated);
-    //    assert(!s->terminated);
     if (t->forward == s && s->forward == NULL) {
       object_set_collector(target, s);
       object_set_collector(obj, s);

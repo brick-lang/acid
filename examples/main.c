@@ -277,6 +277,9 @@ void* wrapper(void* arg) {
 
 dlink_t* dlink(dlink_t* o, int n) {
   dlink_t* a = acid_malloc(sizeof(dlink_t));
+  a->prev = NULL; // init vars
+  a->next = NULL;
+
   if (o != NULL) {
     acid_set_field(o, next, a);  // forward
     acid_set_field(a, prev, o);  // back

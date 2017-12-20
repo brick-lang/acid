@@ -9,10 +9,10 @@ typedef struct task_t {
 
 void task_setup();
 void task_teardown();
-task_t *task_create();
+task_t *task_create(bool(*fn)(void*), void* arg);
 void task_start(task_t *task);
-size_t task_get_thread_count();
-bool task_wait_for_zero_threads();
+unsigned task_get_running_count();
+void task_wait_for_zero_threads();
 void task_run(task_t *task);
 void task_destroy(task_t *task);
 

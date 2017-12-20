@@ -12,50 +12,50 @@
 #include "task.h"
 #include "worker.h"
 
-static cnd_t zero_threads_cond;
-static mtx_t count_mutex;
-static atomic_size_t count = 0;
+static cnd_t task_zero_threads_cond;
+static mtx_t task_count_mutex;
+static unsigned task_count = 0;
 
 void task_setup() {
-  mtx_init(&count_mutex, mtx_plain);
-  cnd_init(&zero_threads_cond);
+  mtx_init(&task_count_mutex, mtx_plain);
+  cnd_init(&task_zero_threads_cond);
 }
 
-void task_teardown() {}
+void task_teardown() {
+  cnd_destroy(&task_zero_threads_cond);
+  mtx_destroy(&task_count_mutex);
+}
 
-task_t *task_create() {
+task_t *task_create(bool(*fn)(void*), void* runarg) {
   task_t *task = malloc(sizeof(task_t));
-  task->run = NULL;
-  task->runarg = NULL;
+  task->run = fn;
+  task->runarg = runarg;
   return task;
 }
 
 void task_destroy(task_t *task) { free(task); }
 
 void task_start(task_t *task) {
-  mtx_lock(&count_mutex);
-  count++;
-  mtx_unlock(&count_mutex);
+  mtx_lock(&task_count_mutex);
+  task_count++;
+  mtx_unlock(&task_count_mutex);
   worker_add_task(task);
 }
 
-size_t task_get_thread_count() {
-  size_t retval;
-  mtx_lock(&count_mutex);
-  retval = count;
-  mtx_unlock(&count_mutex);
+unsigned int task_get_running_count() {
+  unsigned int retval;
+  mtx_lock(&task_count_mutex);
+  retval = task_count;
+  mtx_unlock(&task_count_mutex);
   return retval;
 }
 
-bool task_wait_for_zero_threads() {
-  bool retval;
-  mtx_lock(&count_mutex);
-  if (count > 0) {
-    cnd_wait(&zero_threads_cond, &count_mutex);
+void task_wait_for_zero_threads() {
+  mtx_lock(&task_count_mutex);
+  if (task_count > 0) {
+    cnd_wait(&task_zero_threads_cond, &task_count_mutex);
   }
-  retval = (count == 0);
-  mtx_unlock(&count_mutex);
-  return retval;
+  mtx_unlock(&task_count_mutex);
 }
 
 void task_run(task_t *task) {
@@ -65,11 +65,11 @@ void task_run(task_t *task) {
     worker_add_task(task);
   } else {
     task_destroy(task);
-    mtx_lock(&count_mutex);
-    count--;
-    if (count == 0) {
-      cnd_broadcast(&zero_threads_cond);
+    mtx_lock(&task_count_mutex);
+    task_count--;
+    if (task_count == 0) {
+      cnd_broadcast(&task_zero_threads_cond);
     }
-    mtx_unlock(&count_mutex);
+    mtx_unlock(&task_count_mutex);
   }
 }

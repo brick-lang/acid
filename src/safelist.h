@@ -2,7 +2,7 @@
 #define SAFELIST_H
 
 #include "../lib/collectc/list.h"
-#include "prioritylock.h"
+#include "idlock.h"
 #include "counter.h"
 
 /**
@@ -10,7 +10,7 @@
  * Conforms to lockable_t interface
  */
 typedef struct safelist_t {
-  prioritylock_t lock;
+  idlock_t lock;
   counter_t *const count;
   List *const data;  // List<Object>
   struct safelist_t *_forward;

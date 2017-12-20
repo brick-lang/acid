@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "prioritylock.h"
+#include "idlock.h"
 #include "lockable.h"
 #include "locker.h"
 
@@ -25,7 +25,7 @@ void locker_destroy(locker_t *locker) {
 
 typedef struct locker_entry_t {
   size_t size;
-  prioritylock_t *ary[4];  // we lock on at max four objects at once
+  idlock_t *ary[4];  // we lock on at max four objects at once
 } locker_entry_t;
 
 static locker_entry_t *locker_entry_create() {
@@ -34,26 +34,26 @@ static locker_entry_t *locker_entry_create() {
   return le;
 }
 
-static inline void locker_entry_add(locker_entry_t *le, prioritylock_t *elem) {
+static inline void locker_entry_add(locker_entry_t *le, idlock_t *elem) {
   le->ary[le->size++] = elem;
 }
 
-static inline size_t remove_duplicate_complocks(prioritylock_t **nums, size_t count) {
+static inline size_t remove_duplicate_complocks(idlock_t **nums, size_t count) {
   if (count == 0) return 0;
   size_t r = 0;
   for (size_t i = 1; i < count; i++) {
-    if (prioritylock_compare(nums[r], nums[i]) != 0) {
+    if (idlock_compare(nums[r], nums[i]) != 0) {
       nums[++r] = nums[i]; // copy-in next unique number
     }
   }
   return r + 1;
 }
 
-static inline void isort(prioritylock_t *arr[], size_t count) {
+static inline void isort(idlock_t *arr[], size_t count) {
   for (int_fast8_t i = 1; i < count; i++) {
-    prioritylock_t *key = arr[i];
+    idlock_t *key = arr[i];
     int_fast8_t j = i-1;
-    while (j >= 0 && prioritylock_compare(arr[j], key) == 1) {
+    while (j >= 0 && idlock_compare(arr[j], key) == 1) {
       arr[j+1] = arr[j];
       j--;
     }
@@ -69,7 +69,7 @@ static inline void isort(prioritylock_t *arr[], size_t count) {
  */
 static void locker_start(size_t locks_count, void *locks[]) {
   // Sort the current set of lockables and extract the complocks
-  prioritylock_t *filtered_locks[locks_count];
+  idlock_t *filtered_locks[locks_count];
   size_t filtered_locks_count = 0;
   for (int i = 0; i < locks_count; i++) {
     if (locks[i] != NULL) {  // remove any nulls
@@ -84,8 +84,8 @@ static void locker_start(size_t locks_count, void *locks[]) {
 
   locker_entry_t *new_locks = locker_entry_create();
   for (uint_fast8_t i = 0; i < filtered_locks_count; i++) {
-    prioritylock_t *lock = filtered_locks[i];
-    prioritylock_lock(lock);
+    idlock_t *lock = filtered_locks[i];
+    idlock_lock(lock);
     locker_entry_add(new_locks, lock);
   }
   list_add_last(current_locks->stack, new_locks);
@@ -121,10 +121,10 @@ void locker_end() {
   locker_entry_t *locks = NULL;
   list_remove_last(lk->stack, (void **)&locks);  // pop off the stack;
 
-  prioritylock_t *lock = NULL;
+  idlock_t *lock = NULL;
   for (int i = 0; i < locks->size; ++i) {
     lock = locks->ary[i];
-    prioritylock_unlock(lock);
+    idlock_unlock(lock);
   }
   free(locks);
 }

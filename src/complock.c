@@ -7,7 +7,7 @@ static atomic_uint_fast64_t id_count = 1;
 complock_t* complock_create(priority_t priority) {
   complock_t* complock = malloc(sizeof(complock_t));
   *(uint_fast64_t *)&complock->id = id_count++;
-  complock->priority = priority;
+  *(priority_t *)&complock->priority = priority;
 
   // FIXME: check this return value to make sure everything's alright
   // (thrd_success vs thrd_error, etc.)

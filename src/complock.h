@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct complock_t {
   const uint_fast64_t id;
-  priority_t priority;
+  const priority_t priority;
   mtx_t mtx;
 } complock_t;
 

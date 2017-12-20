@@ -16,7 +16,7 @@ collector_t *collector_create() {
   safelist_init(&collector->rebuild_list, &collector->count);
   safelist_init(&collector->clean_list, &collector->count);
 
-  *(complock_t **)&collector->lock = complock_create(PRIORITY_COLLECTOR);
+  complock_init(&collector->lock, PRIORITY_COLLECTOR);
   num_collector++;
   return collector;
 }
@@ -27,7 +27,6 @@ static void collector_destroy(collector_t *collector) {
   safelist_deinit(&collector->recovery_list);
   safelist_deinit(&collector->rebuild_list);
   safelist_deinit(&collector->clean_list);
-  complock_destroy(collector->lock);
   free(collector);
 }
 

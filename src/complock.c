@@ -4,19 +4,14 @@
 
 static atomic_uint_fast64_t id_count = 1;
 
-complock_t* complock_create(priority_t priority) {
-  complock_t* complock = malloc(sizeof(complock_t));
+void complock_init(complock_t* complock, priority_t priority) {
   *(uint_fast64_t *)&complock->id = id_count++;
   *(priority_t *)&complock->priority = priority;
 
   // FIXME: check this return value to make sure everything's alright
   // (thrd_success vs thrd_error, etc.)
   mtx_init(&complock->mtx, mtx_plain | mtx_recursive);
-
-  return complock;
 }
-
-inline void complock_destroy(complock_t* c) { free(c); }
 
 int complock_compare(const complock_t* lock1, const complock_t* lock2) {
   if (lock1->priority < lock2->priority)

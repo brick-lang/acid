@@ -24,8 +24,7 @@ typedef struct complock_t {
   mtx_t mtx;
 } complock_t;
 
-complock_t* complock_create(priority_t priority);
-void complock_destroy(complock_t* c);
+void complock_init(complock_t *c, priority_t priority);
 int complock_compare(const complock_t* c1, const complock_t* c2);
 int complock_equals(complock_t* c1, complock_t* c2);
 int complock_lock(complock_t* c);

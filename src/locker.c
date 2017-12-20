@@ -73,10 +73,8 @@ static void locker_start(size_t locks_count, void *locks[]) {
   size_t filtered_locks_count = 0;
   for (int i = 0; i < locks_count; i++) {
     if (locks[i] != NULL) {  // remove any nulls
-      lockable_t *lock = locks[i];
-      if (lock->cmplock != NULL) {
-        filtered_locks[filtered_locks_count++] = lock->cmplock;
-      }
+      lockable_t *lockable = locks[i];
+      filtered_locks[filtered_locks_count++] = &lockable->lock;
     }
   }
   if (filtered_locks_count > 1) {

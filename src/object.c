@@ -42,7 +42,8 @@ Object *object_init(Object *obj) {
   htc.key_compare = cc_common_cmp_ptr;
   hashtable_new_conf(&htc, &obj->links);
 
-  obj->lock = complock_create(PRIORITY_OBJECT);
+  complock_init(&obj->lock, PRIORITY_OBJECT);
+
   obj->which = 0;
   obj->phantomized = false;
   obj->count[0] = 0;
@@ -87,7 +88,6 @@ static void object_del(Object *obj) {
     obj->dtor(obj->data);
   }
   locker_end();
-  complock_destroy(obj->lock);
   free(obj);  // free the memory
   acid_collect_count++;
 }

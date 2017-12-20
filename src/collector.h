@@ -8,7 +8,7 @@
 #include "object.h"
 
 typedef struct collector_t {
-  complock_t *const lock; // part of the 'lockable' interface.
+  complock_t lock; // part of the 'lockable' interface.
   struct collector_t *forward;
 
   counter_t count;

@@ -15,7 +15,7 @@ void acid_setup();
 void acid_teardown_nonblocking();
 void acid_teardown();
 
-#define _cleanup_acid_dissolve_ __attribute__((cleanup(acid_dissolve_cleanup)))
+#define _cleanup_acid_dissolve_ __attribute__((cleanup(_acid_dissolve_cleanup)))
 
 #define acid_set_field(var, field, acid_val)                              \
   if (acid_is_managed(acid_val)) {                                        \
@@ -29,9 +29,10 @@ void acid_teardown();
 
 void *acid_malloc(size_t alloc_size);
 void *acid_malloc_dtor(size_t alloc_size, void (*dtor)(void *));
+
+void acid_reinforce(acid_t acid_ptr);
 void acid_dissolve(acid_t acid_ptr);
-void acid_dissolve_cleanup(void *acid_ptr);
-void acid_retain(acid_t acid_ptr);
+void _acid_dissolve_cleanup(void *acid_ptr);
 
 bool acid_is_managed(const void *ptr);
 void _acid_set_raw(acid_t *var, acid_t acid_val);

@@ -16,6 +16,7 @@ safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
 }
 
 void safelist_deinit(safelist_t *sl) {
+  complock_destroy(sl->lock);
   list_destroy(sl->data);
 }
 

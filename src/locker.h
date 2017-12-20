@@ -1,6 +1,8 @@
 #ifndef LOCKER_H
 #define LOCKER_H
 #include "../lib/collectc/list.h"
+#include "../lib/collectc/treetable.h"
+
 
 /**
  * The locker manages locks in a way that keeps the code safe
@@ -9,6 +11,7 @@
  * have lower "priority" than any locks already obtained. */
 typedef struct locker_t {
   List *stack;  // List<locker_entry_t*>
+  TreeTable *locks;
 } locker_t;
 
 void locker_setup();

@@ -15,11 +15,13 @@ locker_t *locker_create() {
   locker_t *locker = malloc(sizeof(locker_t));
   // TODO: check CC_OK here
   list_new(&locker->stack);
+  treetable_new((int (*)(const void *, const void *)) prioritylock_compare, &locker->locks);
   return locker;
 }
 
 void locker_destroy(locker_t *locker) {
   list_destroy(locker->stack);
+  treetable_destroy(locker->locks);
   free(locker);
 }
 
@@ -68,6 +70,18 @@ static inline void isort(prioritylock_t *arr[], size_t count) {
  * @param locks the locks to use
  */
 static void locker_start(size_t locks_count, void *locks[]) {
+  // Determine the maximum priority of existing locks
+  // All new locks must have lower priority than maxPriority.
+  int max_priority = INT_MAX;
+  if (treetable_size(current_locks->locks) > 0) {
+    TREETABLE_FOREACH(locks_entry, current_locks->locks, {
+      prioritylock_t *const lock = locks_entry.key;
+      if (lock->priority < max_priority) {
+        max_priority = lock->priority;
+      }
+    })
+  }
+
   // Sort the current set of lockables and extract the complocks
   prioritylock_t *filtered_locks[locks_count];
   size_t filtered_locks_count = 0;
@@ -85,8 +99,20 @@ static void locker_start(size_t locks_count, void *locks[]) {
   locker_entry_t *new_locks = locker_entry_create();
   for (uint_fast8_t i = 0; i < filtered_locks_count; i++) {
     prioritylock_t *lock = filtered_locks[i];
-    prioritylock_lock(lock);
-    locker_entry_add(new_locks, lock);
+    if (treetable_contains_key(current_locks->locks, lock)) {
+      size_t count;
+      treetable_get(current_locks->locks, lock, (void **) &count);
+      treetable_add(current_locks->locks, lock, (void *) (count + 1));
+      locker_entry_add(new_locks, lock);
+    } else if (!treetable_contains_key(current_locks->locks, lock)
+        && lock->priority < max_priority) {
+      treetable_add(current_locks->locks, lock, (void *) 1);
+      prioritylock_lock(lock);
+      locker_entry_add(new_locks, lock);
+    } else {
+      printf("Error! Possible deadlock with group of %zu locks\n", treetable_size(current_locks->locks));
+      abort();
+    }
   }
   list_add_last(current_locks->stack, new_locks);
 }
@@ -124,7 +150,14 @@ void locker_end() {
   prioritylock_t *lock = NULL;
   for (int i = 0; i < locks->size; ++i) {
     lock = locks->ary[i];
-    prioritylock_unlock(lock);
+    size_t count = 0;
+    treetable_get(lk->locks, lock, (void **) &count);
+    if (count == 1) {
+      treetable_remove(lk->locks, lock, NULL);
+      prioritylock_unlock(lock);
+    } else {
+      treetable_add(lk->locks, lock, (void *) (count - 1));
+    }
   }
   free(locks);
 }

@@ -8,7 +8,7 @@ safelist_t *safelist_create(counter_t *c) {
 }
 
 safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
-  complock_init(&sl->lock, PRIORITY_LIST);
+  prioritylock_init(&sl->lock, PRIORITY_LIST);
   *(counter_t **)&sl->count = c;
   list_new((List **)&sl->data);
   sl->_forward = NULL;

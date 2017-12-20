@@ -337,7 +337,7 @@ int main(int argc, char** argv) {
 //  for (int x = 1; x <= 8; ++x) {
 //    benzene_ring_scalability(x);
 //  }
-  printf("\n");
+//  printf("\n");
 
   acid_teardown();
 

@@ -2,13 +2,13 @@
 #define COLLECTOR_H
 
 #include <stdbool.h>
-#include "complock.h"
+#include "prioritylock.h"
 #include "counter.h"
 #include "safelist.h"
 #include "object.h"
 
 typedef struct collector_t {
-  complock_t lock; // part of the 'lockable' interface.
+  prioritylock_t lock; // part of the 'lockable' interface.
   counter_t count;
 
   safelist_t collect;

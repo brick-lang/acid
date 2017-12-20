@@ -42,7 +42,7 @@ Object *object_init(Object *obj) {
   htc.key_compare = cc_common_cmp_ptr;
   hashtable_new_conf(&htc, &obj->links);
 
-  complock_init(&obj->lock, PRIORITY_OBJECT);
+  prioritylock_init(&obj->lock, PRIORITY_OBJECT);
 
   obj->which = 0;
   obj->phantomized = false;

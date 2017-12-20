@@ -1,5 +1,5 @@
 add_library(acid
-        acid.c complock.c locker.c link.c
+        acid.c prioritylock.c locker.c link.c
         object.c collector.c safelist.c
         task.c worker.c
         $<TARGET_OBJECTS:collectc> $<TARGET_OBJECTS:tinycthread>)

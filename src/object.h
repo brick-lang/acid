@@ -3,7 +3,7 @@
 
 #include <stdatomic.h>
 #include "../lib/collectc/hashtable.h"
-#include "complock.h"
+#include "prioritylock.h"
 #include "safelist.h"
 
 /**
@@ -11,7 +11,7 @@
 typedef atomic_uint_fast8_t bit_t;
 
 typedef struct acid_header_t {
-  complock_t lock;
+  prioritylock_t lock;
   HashTable *links;  // HashTable<String, Link>
   bit_t which;
   bool phantomized;

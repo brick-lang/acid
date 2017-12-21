@@ -1,10 +1,11 @@
 #include <assert.h>
 
-#include "object.h"
 #include "collector.h"
 #include "link.h"
 #include "lockable.h"
 #include "locker.h"
+#include "memory.h"
+#include "object.h"
 #include "task.h"
 
 // TODO: This isn't particularly elegant, but...
@@ -16,8 +17,8 @@ atomic_uint_fast64_t acid_world_count;
 atomic_uint_fast64_t acid_collect_count;
 
 size_t hashtable_hash_offset(const void *key, int len, uint32_t seed) {
-  (void) len;
-  (void) seed;
+  (void)len;
+  (void)seed;
   return (size_t)key;
 }
 
@@ -61,17 +62,6 @@ Object *object_init(Object *obj) {
   return obj;
 }
 
-Object *object_create() {
-  Object *obj = malloc(sizeof(Object));
-  return object_init(obj);
-}
-
-Object *object_create_strong() {
-  Object *o = object_create();
-  object_inc_strong(o);
-  return o;
-}
-
 Object *object_init_strong(Object *o) {
   object_init(o);
   object_inc_strong(o);
@@ -98,7 +88,8 @@ static void object_remove_links(Object *obj) {
 
   locker_start1(obj);
   if (hashtable_size(obj->links) > 0) {
-    lks = malloc(sizeof(link_t *) * hashtable_size(obj->links));
+    lks = xmalloc(sizeof(link_t *) * hashtable_size(obj->links),
+                  "object_remove_links");
     HASHTABLE_FOREACH(entry, obj->links, { lks[lks_size++] = entry->value; })
   }
   hashtable_remove_all(obj->links);
@@ -228,7 +219,8 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
     assert(obj->collector != NULL);
     obj->phantomization_complete = false;
     if (hashtable_size(obj->links) > 0) {
-      phantoms = malloc(sizeof(link_t *) * hashtable_size(obj->links));
+      phantoms = xmalloc(sizeof(link_t *) * hashtable_size(obj->links),
+                         "object_phantomize_node");
       HASHTABLE_FOREACH(entry, obj->links,
                         { phantoms[phantoms_size++] = entry->value; })
     }
@@ -333,7 +325,8 @@ void object_recover_node(Object *obj, collector_t *cptr) {
     assert(obj->phantomization_complete);
     obj->phantomized = false;
     if (hashtable_size(obj->links) > 0) {
-      rebuild = malloc(sizeof(link_t *) * hashtable_size(obj->links));
+      rebuild = xmalloc(sizeof(link_t *) * hashtable_size(obj->links),
+                        "object_recover_node");
       HASHTABLE_FOREACH(entry, obj->links,
                         { rebuild[rebuild_size++] = entry->key; })
     }
@@ -453,7 +446,7 @@ Object *object_get(Object *obj, size_t field_offset) {
 
   locker_start1(obj);
   link_t *lk = NULL;
-  hashtable_get(obj->links, (void *) field_offset, (void **)&lk);
+  hashtable_get(obj->links, (void *)field_offset, (void **)&lk);
   if (lk != NULL) retval = lk->target;
   locker_end();
 
@@ -465,10 +458,10 @@ void object_set(Object *obj, size_t field_offset, Object *referent) {
   link_t *old_link = NULL;
 
   locker_start2(obj, referent);
-  hashtable_get(obj->links, (void *) field_offset, (void **)&old_link);
+  hashtable_get(obj->links, (void *)field_offset, (void **)&old_link);
 
   if (referent == NULL) {
-    hashtable_remove(obj->links, (void *) field_offset, NULL);
+    hashtable_remove(obj->links, (void *)field_offset, NULL);
     locker_end();
     if (old_link != NULL) link_dec(old_link);
     return;
@@ -482,7 +475,7 @@ void object_set(Object *obj, size_t field_offset, Object *referent) {
   }
 
   link_t *lk = link_create(obj);
-  hashtable_add(obj->links, (void *) field_offset, lk);
+  hashtable_add(obj->links, (void *)field_offset, lk);
   lk->target = referent;
 
   if (obj->phantomized) {

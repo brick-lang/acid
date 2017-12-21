@@ -1,5 +1,7 @@
 #include "acid.h"
+#include <stdio.h>
 #include "locker.h"
+#include "memory.h"
 #include "object.h"
 #include "task.h"
 #include "worker.h"
@@ -23,14 +25,21 @@ void acid_teardown() {
 
 void *acid_malloc(size_t alloc_size) {
   // | Object (header) | datum...
-  void *fullspace = malloc(sizeof(Object) + alloc_size);
+  void *fullspace = xmalloc(sizeof(Object) + alloc_size, "acid_malloc");
+
+  /* // act like malloc, and fail fast */
+  /* if (fullspace == NULL) { */
+  /*   fprintf(stderr, "acid_malloc: ERROR! Out of memory.\n"); */
+  /*   return NULL; */
+  /* } */
+
   Object *o = object_init_strong(fullspace);
   void *data_section = (void *)((intptr_t)fullspace + sizeof(Object));
   o->data = data_section;
   return data_section;
 }
 
-void *acid_malloc_dtor(size_t alloc_size, void(*dtor)(void*)) {
+void *acid_malloc_dtor(size_t alloc_size, void (*dtor)(void *)) {
   void *mem = acid_malloc(alloc_size);
   _acid_get_header(mem)->dtor = dtor;
   return mem;

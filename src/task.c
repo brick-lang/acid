@@ -7,8 +7,10 @@
 
 #include <assert.h>
 #include <stdatomic.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "locker.h"
+#include "memory.h"
 #include "task.h"
 #include "worker.h"
 
@@ -26,8 +28,8 @@ void task_teardown() {
   mtx_destroy(&task_count_mutex);
 }
 
-task_t *task_create(bool(*fn)(void*), void* runarg) {
-  task_t *task = malloc(sizeof(task_t));
+task_t *task_create(bool (*fn)(void *), void *runarg) {
+  task_t *task = xmalloc(sizeof(task_t), "task_create");
   task->run = fn;
   task->runarg = runarg;
   return task;

@@ -24,9 +24,7 @@ typedef struct acid_header_t {
   uint64_t magic;  // magic number to determine if an object is GC-tracked
 } Object;
 
-Object *object_create();
 Object *object_init(Object *o);
-Object *object_create_strong();
 Object *object_init_strong(Object *o);
 Object *object_get(Object *obj, size_t field_offset);
 void object_set(Object *obj, size_t field_offset, Object *referent);

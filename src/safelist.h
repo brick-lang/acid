@@ -16,7 +16,6 @@ typedef struct safelist_t {
   struct safelist_t *_forward;
 } safelist_t;
 
-safelist_t *safelist_create(counter_t *c);
 safelist_t *safelist_init(safelist_t* sl, counter_t *c);
 void safelist_deinit(safelist_t *sl);
 void safelist_add(safelist_t *sl, void *datum);

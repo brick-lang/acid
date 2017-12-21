@@ -1,11 +1,14 @@
 #include "link.h"
 #include <assert.h>
+#include <stdio.h>
 #include "collector.h"
 #include "locker.h"
+#include "memory.h"
 #include "object.h"
+#include "task.h"
 
 link_t *link_create(Object *s) {
-  link_t *link = malloc(sizeof(link_t));
+  link_t *link = xmalloc(sizeof(link_t), "link_create");
   *(Object **)&link->src = s;
   link->target = NULL;
   link->which = 0;

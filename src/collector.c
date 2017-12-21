@@ -1,12 +1,15 @@
 #include "collector.h"
 #include <assert.h>
+#include <stdio.h>
 #include "locker.h"
+#include "memory.h"
 #include "object.h"
+#include "task.h"
 
 atomic_size_t num_collector = 0;
 
 collector_t *collector_create() {
-  collector_t *collector = malloc(sizeof(collector_t));
+  collector_t *collector = xmalloc(sizeof(collector_t), "collector_create");
   collector->forward = NULL;
   collector->count.ref_count = 0;
   collector->count.store_count = 0;
@@ -29,7 +32,6 @@ static void collector_destroy(collector_t *collector) {
   safelist_deinit(&collector->clean_list);
   free(collector);
 }
-
 
 static void collector_terminate(collector_t *collector) {
   locker_start2(collector, collector->forward);

@@ -2,12 +2,10 @@
 #include "locker.h"
 #include "object.h"
 
-safelist_t *safelist_create(counter_t *c) {
-  safelist_t *sl = malloc(sizeof(safelist_t));
-  return safelist_init(sl, c);
-}
+#include <stdio.h>
+#include "task.h"
 
-safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
+safelist_t *safelist_init(safelist_t *sl, counter_t *c) {
   idlock_init(&sl->lock);
   *(counter_t **)&sl->count = c;
   list_new((List **)&sl->data);
@@ -15,9 +13,7 @@ safelist_t *safelist_init(safelist_t* sl, counter_t *c) {
   return sl;
 }
 
-void safelist_deinit(safelist_t *sl) {
-  list_destroy(sl->data);
-}
+void safelist_deinit(safelist_t *sl) { list_destroy(sl->data); }
 
 void safelist_add(safelist_t *sl, void *datum) {
   safelist_t *f = NULL;

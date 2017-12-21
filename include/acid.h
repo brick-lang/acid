@@ -1,6 +1,5 @@
 #ifndef ACID_H
 #define ACID_H
-#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>

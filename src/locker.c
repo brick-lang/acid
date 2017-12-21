@@ -1,9 +1,11 @@
+#include "locker.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "idlock.h"
 #include "lockable.h"
-#include "locker.h"
+#include "memory.h"
+#include "task.h"
 
 static _Thread_local locker_t *current_locks = NULL;
 
@@ -12,7 +14,7 @@ void locker_setup() { current_locks = locker_create(); }
 void locker_teardown() { locker_destroy(current_locks); }
 
 locker_t *locker_create() {
-  locker_t *locker = malloc(sizeof(locker_t));
+  locker_t *locker = xmalloc(sizeof(locker_t), "locker_create");
   // TODO: check CC_OK here
   list_new(&locker->stack);
   return locker;
@@ -29,7 +31,7 @@ typedef struct locker_entry_t {
 } locker_entry_t;
 
 static locker_entry_t *locker_entry_create() {
-  locker_entry_t *le = malloc(sizeof(locker_entry_t));
+  locker_entry_t *le = xmalloc(sizeof(locker_entry_t), "locker_entry_create");
   le->size = 0;
   return le;
 }
@@ -43,7 +45,7 @@ static inline size_t remove_duplicate_complocks(idlock_t **nums, size_t count) {
   size_t r = 0;
   for (size_t i = 1; i < count; i++) {
     if (idlock_compare(nums[r], nums[i]) != 0) {
-      nums[++r] = nums[i]; // copy-in next unique number
+      nums[++r] = nums[i];  // copy-in next unique number
     }
   }
   return r + 1;
@@ -52,12 +54,12 @@ static inline size_t remove_duplicate_complocks(idlock_t **nums, size_t count) {
 static inline void isort(idlock_t *arr[], size_t count) {
   for (int_fast8_t i = 1; i < count; i++) {
     idlock_t *key = arr[i];
-    int_fast8_t j = i-1;
+    int_fast8_t j = i - 1;
     while (j >= 0 && idlock_compare(arr[j], key) == 1) {
-      arr[j+1] = arr[j];
+      arr[j + 1] = arr[j];
       j--;
     }
-    arr[j+1] = key;
+    arr[j + 1] = key;
   }
 }
 
@@ -79,7 +81,8 @@ static void locker_start(size_t locks_count, void *locks[]) {
   }
   if (filtered_locks_count > 1) {
     isort(filtered_locks, filtered_locks_count);
-    filtered_locks_count = remove_duplicate_complocks(filtered_locks, filtered_locks_count);
+    filtered_locks_count =
+        remove_duplicate_complocks(filtered_locks, filtered_locks_count);
   }
 
   locker_entry_t *new_locks = locker_entry_create();

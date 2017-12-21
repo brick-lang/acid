@@ -1,10 +1,12 @@
+#include <malloc.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "../src/locker.h"
-#include "acid.h"
 #include "../lib/collectc/hashtable.h"
+#include "../src/locker.h"
+#include "../src/task.h"
+#include "acid.h"
 
 #define HERE_MSG(msg)                                                       \
   (printf("here: %s(%s:%d) %s\n", __func__, strrchr("/" __FILE__, '/') + 1, \
@@ -59,39 +61,39 @@ void wheel() {
   acid_dissolve(prev);
   acid_dissolve(wheel);
 }
-//
-//void multi_collect() {
-//  slink_t* a1 = acid_malloc(sizeof(slink_t));
-//  slink_t* prev _cleanup_acid_dissolve_ = NULL;
-//  acid_set(prev, a1);
-//
-//  const int n = 6;
-//  for (int i = 0; i <= n; i++) {
-//    slink_t* x _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
-//    acid_set_field(prev, next, x);
-//    acid_set(prev, x);
-//  }
-//  HERE_MSG("First chain created");
-//
-//  slink_t* a2 = acid_malloc(sizeof(slink_t));
-//  slink_t* prev2 _cleanup_acid_dissolve_ = NULL;
-//  acid_set(prev2, a2);
-//
-//  const int nt = 6;
-//  for (int i = 0; i <= nt; i++) {
-//    slink_t* x _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
-//    acid_set_field(prev2, next, x);
-//    acid_set(prev2, x);
-//  }
-//  HERE_MSG("Second chain created");
-//
-//  object_set(_acid_get_header(prev), "n", _acid_get_header(a2));
-//  object_set(_acid_get_header(prev), "m", _acid_get_header(a1));
-//  HERE_MSG("Chains joined");
-//
-//  acid_dissolve(a1);
-//  acid_dissolve(a2);
-//}
+
+void multi_collect() {
+  slink_t* a1 = acid_malloc(sizeof(slink_t));
+  slink_t* prev _cleanup_acid_dissolve_ = NULL;
+  acid_set(prev, a1);
+
+  const int n = 6;
+  for (int i = 0; i <= n; i++) {
+    slink_t* x _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
+    acid_set_field(prev, next, x);
+    acid_set(prev, x);
+  }
+  HERE_MSG("First chain created");
+
+  slink_t* a2 = acid_malloc(sizeof(slink_t));
+  slink_t* prev2 _cleanup_acid_dissolve_ = NULL;
+  acid_set(prev2, a2);
+
+  const int nt = 6;
+  for (int i = 0; i <= nt; i++) {
+    slink_t* x _cleanup_acid_dissolve_ = acid_malloc(sizeof(slink_t));
+    acid_set_field(prev2, next, x);
+    acid_set(prev2, x);
+  }
+  HERE_MSG("Second chain created");
+
+  object_set(_acid_get_header(prev), 600, _acid_get_header(a2));  // "n"
+  object_set(_acid_get_header(prev), 800, _acid_get_header(a1));  // "m"
+  HERE_MSG("Chains joined");
+
+  acid_dissolve(a1);
+  acid_dissolve(a2);
+}
 
 #include "../src/object.h"
 
@@ -109,58 +111,59 @@ void clique() {
     for (int j = 0; j < EDGE_COUNT; j++) {
       if (i != j) {
         acid_set_field(a[i], edges[j], a[j]);
-        //printf("%zu\n",(uintptr_t)&(a[i]->edges[j]) - (uintptr_t)(a[i]));
+        // printf("%zu\n",(uintptr_t)&(a[i]->edges[j]) - (uintptr_t)(a[i]));
       }
     }
   }
 
-//  HASHTABLE_FOREACH(entry, _acid_get_header(a[0])->links, { printf("%zu\n", (size_t)entry->key); })
+  //  HASHTABLE_FOREACH(entry, _acid_get_header(a[0])->links, { printf("%zu\n",
+  //  (size_t)entry->key); })
 
   for (int i = EDGE_COUNT - 1; i >= 0; i--) {
     acid_dissolve(a[i]);
   }
 }
 
-//void benzene_ring_scalability(int size) {
-//  int n = size * 16;
-//  slink_t *a[n][6];
-//  for (int i = 0; i < n; ++i) {
-//    for (int j = 0; j < 6; ++j) {
-//      a[i][j] = acid_malloc(sizeof(slink_t));
-//    }
-//  }
-//
-//  // create benzene
-//  for (int i = 0; i < n; ++i) {
-//    for (int j = 0; j < 6; ++j) {
-//      slink_t *target = a[i][(j + 1) % 6];
-//      acid_set_field(a[i][j], next, target);
-//    }
-//  }
-//
-//  for (int i = 0; i < n - 1; ++i) {
-//    object_set(_acid_get_header(a[i][1]), "next1", _acid_get_header(a[i + 1][5]));
-//  }
-//  for (int i = n - 1; i > 0; --i) {
-//    object_set(_acid_get_header(a[i][4]), "next2", _acid_get_header(a[i - 1][2]));
-//  }
-//
-//  for (int i = 0; i < n; ++i) {
-//    for (int j = 1; j < 6; ++j) {
-//      acid_dissolve(a[i][j]);
-//      //a[i][j] = NULL;
-//    }
-//  }
-//
-//  // printf("Benzene x%d constructed.\n", n);
-//  printf(".");
-//  fflush(stdout);
-//  for (int i = 0; i < n; ++i) {
-//    acid_dissolve(a[i][0]);
-//    //a[i][0] = NULL;
-//  }
-//}
-//
+void benzene_ring_scalability(int size) {
+  int n = size * 16;
+  slink_t* a[n][6];
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      a[i][j] = acid_malloc(sizeof(slink_t));
+    }
+  }
+
+  // create benzene
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      slink_t* target = a[i][(j + 1) % 6];
+      acid_set_field(a[i][j], next, target);
+    }
+  }
+
+  for (int i = 0; i < n - 1; ++i) {
+    object_set(_acid_get_header(a[i][1]), 400,
+               _acid_get_header(a[i + 1][5]));  // "next1"
+  }
+  for (int i = n - 1; i > 0; --i) {
+    object_set(_acid_get_header(a[i][4]), 800,
+               _acid_get_header(a[i - 1][2]));  // "next2"
+  }
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 1; j < 6; ++j) {
+      acid_dissolve(a[i][j]);
+      // a[i][j] = NULL;
+    }
+  }
+
+  // printf("Benzene x%d constructed.\n", n);
+  for (int i = 0; i < n; ++i) {
+    acid_dissolve(a[i][0]);
+    // a[i][0] = NULL;
+  }
+}
+
 // void benzene_ring_ms_test() {
 //  int n = 8;
 //
@@ -199,7 +202,7 @@ void clique() {
 //    root_free(a[i][0]);
 //  }
 //}
-//
+
 // void object_set_test() {
 //  int n = 2;
 //
@@ -277,7 +280,7 @@ void* wrapper(void* arg) {
 
 dlink_t* dlink(dlink_t* o, int n) {
   dlink_t* a = acid_malloc(sizeof(dlink_t));
-  a->prev = NULL; // init vars
+  a->prev = NULL;  // init vars
   a->next = NULL;
 
   if (o != NULL) {
@@ -293,8 +296,8 @@ dlink_t* dlink(dlink_t* o, int n) {
 }
 
 void doubly_linked_list() {
-  dlink_t *dl = dlink(NULL, 30);
-  dlink_t *o = NULL;
+  dlink_t* dl = dlink(NULL, 30);
+  dlink_t* o = NULL;
   while (true) {
     o = dl->prev;
     if (o == NULL) break;
@@ -317,6 +320,7 @@ extern atomic_uint_fast64_t acid_world_count;
 extern atomic_uint_fast64_t acid_collect_count;
 
 int main(int argc, char** argv) {
+  mallopt(M_CHECK_ACTION, 0x3);
   struct timespec wall_start;
   timespec_get(&wall_start, TIME_UTC);
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
@@ -329,15 +333,32 @@ int main(int argc, char** argv) {
   simplecycle2();
   wheel();
   doubly_linked_list();
-//  multi_collect();
+  multi_collect();
   clique();
-//  benzene_ring_ms_test();
-//  object_set_test();
+  //  benzene_ring_ms_test();
+  //  object_set_test();
 
-//  for (int x = 1; x <= 8; ++x) {
-//    benzene_ring_scalability(x);
-//  }
-//  printf("\n");
+  task_wait_for_zero_threads();
+  const int max_benzene = 2048;
+  printf("[%d/%d] benzene constructed w/ %d nodes [%lu/%lu]", 0, max_benzene,
+         0 * 16, acid_collect_count, acid_world_count);
+  fflush(stdout);
+  struct timespec b_start, b_end;
+  for (int x = 2048; x <= max_benzene; ++x) {
+    timespec_get(&b_start, TIME_UTC);
+    benzene_ring_scalability(x);
+    /* if (x % 32 == 0)  */ task_wait_for_zero_threads();
+    timespec_get(&b_end, TIME_UTC);
+
+    printf(
+        "\r[%d/%d] benzene created and collected w/ %d nodes in %lfs [%lu/%lu]",
+        x, max_benzene, x * 16,
+        (b_end.tv_sec - b_start.tv_sec) +
+            (0.000000001 * (b_end.tv_nsec - b_start.tv_nsec)),
+        acid_collect_count, acid_world_count);
+    fflush(stdout);
+  }
+  printf("\n");
 
   acid_teardown();
 
@@ -348,10 +369,10 @@ int main(int argc, char** argv) {
 
   struct timespec wall_diff = {
       .tv_nsec = (wall_end.tv_nsec - wall_start.tv_nsec),
-      .tv_sec = (wall_end.tv_sec - wall_start.tv_sec)
-  };
+      .tv_sec = (wall_end.tv_sec - wall_start.tv_sec)};
   printf("Total cpu time elasped: %lf\n", 0.001 * (end - start));
-  printf("Total wall time elapsed: %lf\n",  wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec));
+  printf("Total wall time elapsed: %lf\n",
+         wall_diff.tv_sec + (0.000000001 * wall_diff.tv_nsec));
   printf("Total number of objects created: %zu\n", acid_world_count);
   printf("Total number of objects collected: %zu\n", acid_collect_count);
   exit(0);

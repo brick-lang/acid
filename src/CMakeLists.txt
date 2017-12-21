@@ -2,9 +2,12 @@ add_library(acid
         acid.c idlock.c locker.c link.c
         object.c collector.c safelist.c
         task.c worker.c memory.c
-        $<TARGET_OBJECTS:collectc> $<TARGET_OBJECTS:tinycthread>)
+        $<TARGET_OBJECTS:collectc>)
 
-target_link_libraries(acid ${CMAKE_THREAD_LIBS_INIT})
+if(NOT HAVE_THREADS_H)
+  target_sources(acid PUBLIC $<TARGET_OBJECTS:tinycthread>)
+  target_link_libraries(acid ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 set_target_properties(acid PROPERTIES PUBLIC_HEADER "../include/acid.h")
 

@@ -1,15 +1,7 @@
-#include "memory.h"
-
-#include <limits.h>
-#ifdef __STDC_NO_THREADS__
-#include "tinycthread/tinycthread.h"
-#else
-#include <threads.h>
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "task.h"
+#include "threads.h"
 
 void *xmalloc(size_t size, char *func) {
   void *ptr = malloc(size);

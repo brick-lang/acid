@@ -320,7 +320,7 @@ extern atomic_uint_fast64_t acid_world_count;
 extern atomic_uint_fast64_t acid_collect_count;
 
 int main(int argc, char** argv) {
-  mallopt(M_CHECK_ACTION, 0x3);
+//  mallopt(M_CHECK_ACTION, 0x3);
   struct timespec wall_start;
   timespec_get(&wall_start, TIME_UTC);
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);

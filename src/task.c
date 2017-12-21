@@ -1,10 +1,3 @@
-#include <limits.h>
-#ifdef __STDC_NO_THREADS__
-#include "tinycthread/tinycthread.h"
-#else
-#include <threads.h>
-#endif
-
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -13,6 +6,7 @@
 #include "memory.h"
 #include "task.h"
 #include "worker.h"
+#include "threads.h"
 
 static cnd_t task_zero_threads_cond;
 static mtx_t task_count_mutex;

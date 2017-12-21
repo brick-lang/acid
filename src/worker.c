@@ -1,14 +1,8 @@
-#include <limits.h>
-#ifdef __STDC_NO_THREADS__
-#include "tinycthread/tinycthread.h"
-#else
-#include <threads.h>
-#endif
-
 #include <stdatomic.h>
 #include "../lib/collectc/list.h"
 #include "locker.h"
 #include "worker.h"
+#include "threads.h"
 
 #define NUM_WORKERS 8
 

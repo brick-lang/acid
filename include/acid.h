@@ -29,7 +29,7 @@ void acid_teardown();
 void *acid_malloc(size_t alloc_size);
 void *acid_malloc_dtor(size_t alloc_size, void (*dtor)(void *));
 
-void acid_reinforce(acid_t acid_ptr);
+void acid_harden(acid_t acid_ptr);
 void acid_dissolve(acid_t acid_ptr);
 void _acid_dissolve_cleanup(void *acid_ptr);
 

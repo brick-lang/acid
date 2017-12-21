@@ -45,7 +45,7 @@ void *acid_malloc_dtor(size_t alloc_size, void (*dtor)(void *)) {
   return mem;
 }
 
-void acid_reinforce(const void *ptr) {
+void acid_harden(const void *ptr) {
   if (acid_is_managed(ptr)) {
     Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
     locker_start1(obj_addr);

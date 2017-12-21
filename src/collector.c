@@ -1,5 +1,4 @@
 #include "collector.h"
-#include <assert.h>
 #include <stdio.h>
 #include "locker.h"
 #include "memory.h"
@@ -30,7 +29,7 @@ static void collector_destroy(collector_t *collector) {
   safelist_deinit(&collector->recovery_list);
   safelist_deinit(&collector->rebuild_list);
   safelist_deinit(&collector->clean_list);
-  free(collector);
+  xfree(collector);
 }
 
 static void collector_terminate(collector_t *collector) {

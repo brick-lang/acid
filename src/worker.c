@@ -1,4 +1,5 @@
 #include <stdatomic.h>
+#include <rpmalloc/rpmalloc.h>
 #include "../lib/collectc/list.h"
 #include "locker.h"
 #include "worker.h"
@@ -14,7 +15,9 @@ static atomic_bool endtime = false;
 static int worker_run(void *);
 
 void workers_setup() {
-  list_new(&work);
+  ListConf lc = { .mem_alloc = rpmalloc, .mem_calloc = rpcalloc, lc.mem_free = rpfree };
+  list_new_conf(&lc, (List**)&work);
+
   mtx_init(&work_sychro_mutex, mtx_plain | mtx_recursive);
   for (int i = 0; i < NUM_WORKERS; i++) {
     thrd_create(&WORKERS[i], worker_run, NULL);
@@ -66,6 +69,7 @@ static task_t *worker_get_next_task() {
  * @return the exit status of the thread
  */
 static int worker_run(void *ignored) {
+  rpmalloc_thread_initialize();
   locker_setup();
   while (!endtime) {
     task_t *task = worker_get_next_task();
@@ -75,5 +79,6 @@ static int worker_run(void *ignored) {
   }
   // destroy the thread-local locker (if it exists)
   locker_teardown();
+  rpmalloc_thread_finalize();
   return 0;
 }

@@ -1,5 +1,6 @@
 #include "acid.h"
 #include <stdio.h>
+#include "../lib/rpmalloc/rpmalloc.h"
 #include "locker.h"
 #include "memory.h"
 #include "object.h"
@@ -7,6 +8,7 @@
 #include "worker.h"
 
 void acid_setup() {
+  rpmalloc_initialize();
   locker_setup();
   task_setup();
   workers_setup();
@@ -16,6 +18,7 @@ void acid_teardown_nonblocking() {
   workers_teardown();
   task_teardown();
   locker_teardown();
+  rpmalloc_finalize();
 }
 
 void acid_teardown() {

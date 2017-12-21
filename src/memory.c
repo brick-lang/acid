@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "../lib/rpmalloc/rpmalloc.h"
 #include "task.h"
 #include "threads.h"
 
 void *xmalloc(size_t size, char *func) {
-  void *ptr = malloc(size);
+  void *ptr = rpmalloc(size);
   // Out-of-memory error handling
   while (ptr == NULL) {
     if (task_get_running_count() == 0) {
@@ -19,4 +20,8 @@ void *xmalloc(size_t size, char *func) {
     ptr = malloc(size);                                         // try again
   }
   return ptr;
+}
+
+void xfree(void *ptr) {
+  rpfree(ptr);
 }

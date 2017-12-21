@@ -1,14 +1,18 @@
 #include "safelist.h"
-#include "locker.h"
-#include "object.h"
 
 #include <stdio.h>
+#include "../lib/rpmalloc/rpmalloc.h"
+#include "locker.h"
+#include "object.h"
 #include "task.h"
 
 safelist_t *safelist_init(safelist_t *sl, counter_t *c) {
   idlock_init(&sl->lock);
   *(counter_t **)&sl->count = c;
-  list_new((List **)&sl->data);
+
+  ListConf lc = { .mem_alloc = rpmalloc, .mem_calloc = rpcalloc, lc.mem_free = rpfree };
+  list_new_conf(&lc, (List**)&sl->data);
+
   sl->_forward = NULL;
   return sl;
 }

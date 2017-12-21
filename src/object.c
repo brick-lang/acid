@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "../lib/rpmalloc/rpmalloc.h"
 
 #include "collector.h"
 #include "link.h"
@@ -41,6 +42,9 @@ Object *object_init(Object *obj) {
   hashtable_conf_init(&htc);
   htc.hash = hashtable_hash_offset;
   htc.key_compare = cc_common_cmp_ptr;
+  htc.mem_alloc = rpmalloc;
+  htc.mem_calloc = rpcalloc;
+  htc.mem_free = rpfree;
   hashtable_new_conf(&htc, &obj->links);
 
   idlock_init(&obj->lock);
@@ -78,7 +82,7 @@ static void object_del(Object *obj) {
     obj->dtor(obj->data);
   }
   locker_end();
-  free(obj);  // free the memory
+  xfree(obj);  // free the memory
   acid_collect_count++;
 }
 
@@ -101,7 +105,7 @@ static void object_remove_links(Object *obj) {
     for (size_t i = 0; i < lks_size; i++) {
       link_destroy(lks[i]);
     }
-    free(lks);
+    xfree(lks);
   }
 }
 
@@ -246,7 +250,7 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
       }
       locker_end();
     }
-    free(phantoms);
+    xfree(phantoms);
 
     locker_start1(obj);
     obj->phantomization_complete = true;
@@ -342,7 +346,7 @@ void object_recover_node(Object *obj, collector_t *cptr) {
       assert(lk != NULL);
       object_rebuild_link(&cptr->rebuild_list, lk);
     }
-    free(rebuild);
+    xfree(rebuild);
   }
 
   locker_start1(obj);
@@ -468,7 +472,7 @@ void object_set(Object *obj, size_t field_offset, Object *referent) {
   }
 
   if (old_link != NULL && old_link->target == referent) {
-    free(old_link);
+    xfree(old_link);
     old_link = NULL;
     locker_end();
     return;

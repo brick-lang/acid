@@ -29,7 +29,7 @@ task_t *task_create(bool (*fn)(void *), void *runarg) {
   return task;
 }
 
-void task_destroy(task_t *task) { free(task); }
+void task_destroy(task_t *task) { xfree(task); }
 
 void task_start(task_t *task) {
   mtx_lock(&task_count_mutex);

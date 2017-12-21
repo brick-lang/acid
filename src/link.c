@@ -30,7 +30,7 @@ void link_destroy(link_t *link) {
   if (!target_null) {
     link_dec(link);
   }
-  free(link);
+  xfree(link);
 }
 
 // Pseudo: PhantomizeLink

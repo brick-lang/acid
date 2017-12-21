@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "../lib/rpmalloc/rpmalloc.h"
 #include "idlock.h"
 #include "lockable.h"
 #include "memory.h"
@@ -15,14 +16,17 @@ void locker_teardown() { locker_destroy(current_locks); }
 
 locker_t *locker_create() {
   locker_t *locker = xmalloc(sizeof(locker_t), "locker_create");
+
+  ListConf lc = { .mem_alloc = rpmalloc, .mem_calloc = rpcalloc, lc.mem_free = rpfree };
+  list_new_conf(&lc, &locker->stack);
   // TODO: check CC_OK here
-  list_new(&locker->stack);
+
   return locker;
 }
 
 void locker_destroy(locker_t *locker) {
   list_destroy(locker->stack);
-  free(locker);
+  xfree(locker);
 }
 
 typedef struct locker_entry_t {
@@ -129,5 +133,5 @@ void locker_end() {
     lock = locks->ary[i];
     idlock_unlock(lock);
   }
-  free(locks);
+  xfree(locks);
 }

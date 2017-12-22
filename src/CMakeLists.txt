@@ -2,7 +2,7 @@ add_library(acid
         acid.c idlock.c locker.c link.c
         object.c collector.c safelist.c
         task.c worker.c memory.c
-        $<TARGET_OBJECTS:collectc>)
+        $<TARGET_OBJECTS:collectc> counter.c)
 
 if(NOT HAVE_THREADS_H)
   target_sources(acid PUBLIC $<TARGET_OBJECTS:tinycthread>)

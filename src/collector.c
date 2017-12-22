@@ -11,13 +11,12 @@ atomic_size_t num_collector = 0;
 collector_t *collector_create() {
   collector_t *collector = xmalloc(sizeof(collector_t), "collector_create");
   collector->forward = NULL;
-  collector->count.ref_count = 0;
-  collector->count.store_count = 0;
-  safelist_init(&collector->collect, &collector->count);
-  safelist_init(&collector->merged_list, &collector->count);
-  safelist_init(&collector->recovery_list, &collector->count);
-  safelist_init(&collector->rebuild_list, &collector->count);
-  safelist_init(&collector->clean_list, &collector->count);
+  *(counter_t**)&collector->count = counter_create();
+  safelist_init(&collector->collect, collector->count);
+  safelist_init(&collector->merged_list, collector->count);
+  safelist_init(&collector->recovery_list, collector->count);
+  safelist_init(&collector->rebuild_list, collector->count);
+  safelist_init(&collector->clean_list, collector->count);
 
   idlock_init(&collector->lock);
   num_collector++;
@@ -30,6 +29,7 @@ static void collector_destroy(collector_t *collector) {
   safelist_deinit(&collector->recovery_list);
   safelist_deinit(&collector->rebuild_list);
   safelist_deinit(&collector->clean_list);
+  counter_destroy(collector->count);
   free(collector);
 }
 
@@ -47,10 +47,10 @@ void collector_set_forward(collector_t *collector, collector_t *f) {
   }
 
   if (f != NULL) {
-    (&f->count)->ref_count++;
+    counter_inc_ref(f->count);
   }
   if (collector->forward != NULL) {
-    (&collector->forward->count)->ref_count--;
+    counter_dec_ref(collector->forward->count);
   }
 
   collector->forward = f;
@@ -80,18 +80,10 @@ void collector_add_object(collector_t *collector, Object *obj) {
   }
 }
 
-static inline bool counter_continue_waiting(counter_t *counter) {
-  return (counter->ref_count > 0 && counter->store_count == 0);
-}
-
-static inline bool counter_done(counter_t *counter) {
-  return (counter->ref_count == 0 && counter->store_count == 0);
-}
-
 bool collector_run(void *c) {
   collector_t *collector = c;
 
-  if (counter_continue_waiting(&collector->count)) {
+  if (counter_continue_waiting(collector->count)) {
     return true;
   }
 
@@ -132,7 +124,7 @@ bool collector_run(void *c) {
   }
 
   locker_start2(collector, collector->forward);
-  if (counter_done(&collector->count)) {
+  if (counter_done(collector->count)) {
     collector_terminate(collector);
     locker_end();  // release the collector->lock *before* destruction
     collector_destroy(collector);

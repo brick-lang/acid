@@ -107,7 +107,7 @@ bool collector_run(void *c) {
   while (true) {
     Object *obj = safelist_poll(&collector->recovery_list);
     if (obj == NULL) break;
-    object_recover_node(obj, collector);  // don't need to pass rebuild
+    object_recover_node(obj, collector);
     safelist_add(&collector->clean_list, obj);
   }
 

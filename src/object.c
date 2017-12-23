@@ -175,27 +175,8 @@ void object_inc_strong(Object *obj) {
  * @param cptr
  */
 void object_phantomize_node(Object *obj, struct collector_t *cptr) {
-  // Determine if merge needs to be done.
-  collector_t *c = cptr;
-  collector_t *t = obj->collector;
-  if (t != NULL) {
-    while (true) {
-      locker_start2(t, c);
-      if (c == t) {
-        locker_end();
-        break;
-      }
-      assert(c->forward != NULL || t->forward != NULL);
-      if (c->forward != NULL) c = c->forward;
-      if (t->forward != NULL) t = t->forward;
-      locker_end();
-    }
-  }
-
   locker_start1(obj);
   object_set_collector(obj, collector_update(obj->collector));
-
-  assert(t != NULL);
 
   obj->count[obj->which]--;
   assert(obj->count[obj->which] >= 0);  //: object_to_string(obj);
@@ -288,23 +269,6 @@ static void object_rebuild_link(safelist_t *rebuild_next, link_t *const lk) {
 }
 
 void object_recover_node(Object *obj, collector_t *cptr) {
-  // Determine if merge needs to be done.
-  collector_t *c = cptr;
-  collector_t *t = obj->collector;
-  if (t != NULL) {
-    while (true) {
-      locker_start2(t, c);
-      if (c == t) {
-        locker_end();
-        break;
-      }
-      assert(c->forward != NULL || t->forward != NULL);
-      if (c->forward != NULL) c = c->forward;
-      if (t->forward != NULL) t = t->forward;
-      locker_end();
-    }
-  }
-
   char **rebuild = NULL;  // Array<String>
   size_t rebuild_size = 0;
 

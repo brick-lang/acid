@@ -417,37 +417,44 @@ Object *object_get(Object *obj, size_t field_offset) {
   return retval;
 }
 
-// Pseudo: LinkSet
+/**
+ * Create a new link, and decide the type of link to set.
+ *
+ * Pseudo: LinkSet
+ * @param obj the "source" ojbect
+ * @param field_offset the offset of the field holding the reference,
+ *                     used as a hash key.
+ * @param referent the object to link to
+ */
 void object_set(Object *obj, size_t field_offset, Object *referent) {
   link_t *old_link = NULL;
-
   locker_start2(obj, referent);
+
+  // The new reference is NULL, clear the link
+  if (referent == NULL) {
+    hashtable_remove(obj->links, (void *)field_offset, (void**)&old_link);
+    goto cleanup;
+  }
+
   hashtable_get(obj->links, (void *)field_offset, (void **)&old_link);
 
-  if (referent == NULL) {
-    hashtable_remove(obj->links, (void *)field_offset, NULL);
-    locker_end();
-    if (old_link != NULL) link_dec(old_link);
-    return;
-  }
-
+  // Old link's target is the same as new target.
+  // No changes needed, just return.
   if (old_link != NULL && old_link->target == referent) {
-    free(old_link);
     old_link = NULL;
-    locker_end();
-    return;
+    goto cleanup;
   }
 
-  link_t *lk = link_create(obj);
+  // Otherwise, let's create a new link...
+  link_t *lk = link_create(obj, referent);
   hashtable_add(obj->links, (void *)field_offset, lk);
   lk->target = referent;
 
   if (obj->phantomized) {
     object_merge_collectors(obj, referent);
     assert(lk->src->collector != NULL);
-    lk->phantomized = true;
-    lk->target = referent;
     lk->target->count[2]++;
+    lk->phantomized = true;
   } else if (lk->target == obj) {
     // self-references *must* be weak
     lk->which = BIT_FLIP(referent->which);
@@ -459,6 +466,9 @@ void object_set(Object *obj, size_t field_offset, Object *referent) {
     lk->which = BIT_FLIP(referent->which);
     lk->target->count[lk->which]++;
   }
+cleanup:
   locker_end();
-  if (old_link != NULL) link_dec(old_link);
+  if (old_link != NULL) {
+    link_dec(old_link);
+  }
 }

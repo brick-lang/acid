@@ -12,7 +12,7 @@ typedef struct link_t {
   Object* const src;
 } link_t;
 
-link_t* link_create(Object* src);
+link_t* link_create(Object* src, Object *target);
 void link_destroy(link_t* l);
 void link_phantomize(link_t* l);
 void link_dec(link_t* l);

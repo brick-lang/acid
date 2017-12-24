@@ -7,10 +7,10 @@
 #include "object.h"
 #include "task.h"
 
-link_t *link_create(Object *s) {
+link_t *link_create(Object *s, Object *t) {
   link_t *link = xmalloc(sizeof(link_t), "link_create");
   *(Object **)&link->src = s;
-  link->target = NULL;
+  link->target = t;
   link->which = 0;
   link->phantomized = false;
   return link;

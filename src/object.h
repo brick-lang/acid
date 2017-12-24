@@ -11,13 +11,14 @@
 typedef atomic_uint_fast8_t bit_t;
 
 typedef struct acid_header_t {
-  idlock_t lock;
+  idlock_t *lock;
   HashTable *links;  // HashTable<String, Link>
   bit_t which;
   bool phantomized;
   int count[3];
   struct collector_t *collector;
   bool phantomization_complete;
+  atomic_bool queued;
 
   void (*dtor)(void *);
   void *data;
@@ -31,8 +32,8 @@ void object_set(Object *obj, size_t field_offset, Object *referent);
 void object_phantomize_node(Object *obj, struct collector_t *cptr);
 void object_recover_node(Object *obj, struct collector_t *cptr);
 void object_inc_strong(Object *obj);
-void object_dec(Object *obj, bit_t w);
-void object_dec_phantom(Object *obj);
+bool object_dec(Object *obj, bit_t w);
+bool object_dec_phantom(Object *obj);
 void object_dec_strong(Object *obj);
 void object_clean_node(Object *obj);
 bool object_merge_collectors(Object *obj, Object *target);

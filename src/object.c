@@ -43,7 +43,7 @@ Object *object_init(Object *obj) {
   htc.key_compare = cc_common_cmp_ptr;
   hashtable_new_conf(&htc, &obj->links);
 
-  idlock_init(&obj->lock);
+  obj->lock = idlock_create();
 
   obj->which = 0;
   obj->phantomized = false;
@@ -52,6 +52,7 @@ Object *object_init(Object *obj) {
   obj->count[2] = 0;
   obj->collector = NULL;
   obj->phantomization_complete = true;
+  obj->queued = false;
 
   // Storage-related information
   obj->dtor = NULL;
@@ -69,6 +70,7 @@ Object *object_init_strong(Object *o) {
 }
 
 static void object_del(Object *obj) {
+  idlock_t* objlock = obj->lock;
   locker_start1(&obj->lock);
   object_set_collector(obj, NULL);
   assert(hashtable_size(obj->links) == 0);  // make *sure* there are no links
@@ -77,8 +79,9 @@ static void object_del(Object *obj) {
   if (obj->dtor != NULL) {
     obj->dtor(obj->data);
   }
-  locker_end();
   free(obj);  // free the memory
+  locker_end();
+  idlock_destroy(objlock);
   acid_collect_count++;
 }
 
@@ -114,17 +117,26 @@ static bool _object_request_delete_task_run(void *obj) {
 }
 
 static inline void object_request_delete(Object *const obj) {
+  obj->queued = true;
+  //_object_request_delete_task_run(obj);
   task_start(task_create(_object_request_delete_task_run, obj));
 }
 
-void object_dec(Object *obj, bit_t w) {
+bool object_dec(Object *obj, bit_t w) {
+  bool deleted = false;
   locker_start1(obj);
-  obj->count[w]--;
+  if (obj->queued) {
+    deleted = true;
+    goto cleanup;
+  }
+
+  if (obj->count[w] > 0) obj->count[w]--;
   assert(obj->count[w] >= 0);  // : object_to_string(obj);
   if (obj->count[w] == 0 && w == obj->which) {
     if (obj->count[BIT_FLIP(obj->which)] == 0 && obj->count[2] == 0) {
       // No strong, weak, or phantom counts. Let's delete.
       object_request_delete(obj);
+      deleted = true;
     } else {
       // Set up a collector if one doesn't exist
       if (obj->collector == NULL) {
@@ -134,7 +146,9 @@ void object_dec(Object *obj, bit_t w) {
       collector_add_object(obj->collector, obj);
     }
   }
+cleanup:
   locker_end();
+  return deleted;
 }
 
 /**
@@ -143,20 +157,22 @@ void object_dec(Object *obj, bit_t w) {
  *
  * Pseudo: DecPhantom
  */
-void object_dec_phantom(Object *obj) {
+bool object_dec_phantom(Object *obj) {
+  bool deleted = false;
   locker_start1(obj);
-
   obj->count[2]--;  // decrease the phantom count
   assert(obj->count[2] >= 0);
 
   if (obj->count[2] == 0) {
     if (obj->count[0] == 0 && obj->count[1] == 0) {
       object_request_delete(obj);
+      deleted = true;
     } else {
       object_set_collector(obj, NULL);
     }
   }
   locker_end();
+  return deleted;
 }
 
 void object_dec_strong(Object *obj) { object_dec(obj, obj->which); }
@@ -176,10 +192,10 @@ void object_inc_strong(Object *obj) {
  */
 void object_phantomize_node(Object *obj, struct collector_t *cptr) {
   locker_start1(obj);
-  object_set_collector(obj, collector_update(obj->collector));
+  object_set_collector(obj, collector_update(cptr));
 
-  obj->count[obj->which]--;
-  assert(obj->count[obj->which] >= 0);  //: object_to_string(obj);
+  if (obj->count[obj->which] > 0) obj->count[obj->which]--;
+  //assert(obj->count[obj->which] >= 0);  //: object_to_string(obj);
 
   if (obj->count[obj->which] > 0) {
     locker_end();
@@ -202,8 +218,9 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
     if (hashtable_size(obj->links) > 0) {
       phantoms = xmalloc(sizeof(link_t *) * hashtable_size(obj->links),
                          "object_phantomize_node");
-      HASHTABLE_FOREACH(entry, obj->links,
-                        { phantoms[phantoms_size++] = entry->value; })
+      HASHTABLE_FOREACH(entry, obj->links, {
+        phantoms[phantoms_size++] = entry->value;
+      })
     }
   }
   locker_end();
@@ -218,7 +235,12 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
     for (size_t i = 0; i < phantoms_size; i++) {
       lk = phantoms[i];
       assert(lk != NULL);
+      if (hashtable_size(obj->links) == 0) break;
       locker_start2(obj, lk->target);
+      if (hashtable_size(obj->links) == 0) {
+        locker_end();
+        break;
+      }
       assert(obj->phantomized);
       if (!lk->phantomized) {
         assert(lk->src->phantomized);
@@ -241,7 +263,11 @@ void object_phantomize_node(Object *obj, struct collector_t *cptr) {
  * @param lk
  */
 static void object_rebuild_link(safelist_t *rebuild_next, link_t *const lk) {
-  locker_start2(lk->src, lk->target);
+  Object *src = lk->src;
+  locker_start2(src, lk->target);
+  if (hashtable_size(src->links) == 0)
+    goto cleanup;
+
   if (lk->phantomized) {
     if (lk->target == lk->src) {
       lk->which = BIT_FLIP(lk->target->which);
@@ -265,10 +291,12 @@ static void object_rebuild_link(safelist_t *rebuild_next, link_t *const lk) {
       safelist_add(rebuild_next, lk->target);
     }
   }
+cleanup:
   locker_end();
 }
 
 void object_recover_node(Object *obj, collector_t *cptr) {
+  if (obj->queued) return;
   char **rebuild = NULL;  // Array<String>
   size_t rebuild_size = 0;
 
@@ -304,7 +332,8 @@ void object_recover_node(Object *obj, collector_t *cptr) {
     for (size_t i = 0; i < rebuild_size; i++) {
       hashtable_get(obj->links, rebuild[i], (void **)&lk);
       assert(lk != NULL);
-      object_rebuild_link(&cptr->rebuild_list, lk);
+      if (lk->target != NULL)
+        object_rebuild_link(&cptr->rebuild_list, lk);
     }
     free(rebuild);
   }

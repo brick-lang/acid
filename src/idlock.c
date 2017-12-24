@@ -1,15 +1,27 @@
 #include <stdlib.h>
 #include <stdatomic.h>
 #include "idlock.h"
+#include "memory.h"
 
 static atomic_uint_fast64_t id_count = 1;
 
-void idlock_init(idlock_t *complock) {
-  *(uint_fast64_t *)&complock->id = id_count++;
+idlock_t *idlock_create() {
+  idlock_t *lock = xmalloc(sizeof(idlock_t), "idlock_create");
+  idlock_init(lock);
+  return lock;
+}
+
+void idlock_init(idlock_t *lock) {
+  *(uint_fast64_t *)&lock->id = id_count++;
 
   // FIXME: check this return value to make sure everything's alright
   // (thrd_success vs thrd_error, etc.)
-  mtx_init(&complock->mtx, mtx_plain | mtx_recursive);
+  mtx_init(&lock->mtx, mtx_plain | mtx_recursive);
+}
+
+void idlock_destroy(idlock_t* lock) {
+  mtx_destroy(&lock->mtx);
+  free(lock);
 }
 
 int idlock_compare(const idlock_t *lock1, const idlock_t *lock2) {

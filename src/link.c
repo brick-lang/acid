@@ -56,11 +56,14 @@ void link_phantomize(link_t *link) {
 void link_dec(link_t *link) {
   if (link->target == NULL) return;
 
+  bool deleted;
   locker_start2(link->src, link->target);
   if (link->phantomized) {
-    object_dec_phantom(link->target);
+    deleted = object_dec_phantom(link->target);
   } else {
-    object_dec(link->target, link->which);
+    deleted = object_dec(link->target, link->which);
   }
+  if (deleted)
+    link->target = NULL;
   locker_end();
 }

@@ -18,12 +18,14 @@ collector_t *collector_create() {
   safelist_init(&collector->rebuild_list, collector->count);
   safelist_init(&collector->clean_list, collector->count);
 
-  idlock_init(&collector->lock);
+  collector->lock = idlock_create();
   num_collector++;
   return collector;
 }
 
 static void collector_destroy(collector_t *collector) {
+  idlock_t* lock = collector->lock;
+  locker_start1(collector);
   safelist_deinit(&collector->collect);
   safelist_deinit(&collector->merged_list);
   safelist_deinit(&collector->recovery_list);
@@ -31,6 +33,8 @@ static void collector_destroy(collector_t *collector) {
   safelist_deinit(&collector->clean_list);
   counter_destroy(collector->count);
   free(collector);
+  locker_end();
+  idlock_destroy(lock);
 }
 
 static void collector_terminate(collector_t *collector) {

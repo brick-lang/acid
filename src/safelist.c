@@ -6,14 +6,20 @@
 #include "task.h"
 
 safelist_t *safelist_init(safelist_t *sl, counter_t *c) {
-  idlock_init(&sl->lock);
+  sl->lock = idlock_create();
   *(counter_t **)&sl->count = c;
   list_new((List **)&sl->data);
   sl->_forward = NULL;
   return sl;
 }
 
-void safelist_deinit(safelist_t *sl) { list_destroy(sl->data); }
+void safelist_deinit(safelist_t *sl) {
+  idlock_t *lock = sl->lock;
+  locker_start1(sl);
+  list_destroy(sl->data);
+  locker_end();
+  idlock_destroy(lock);
+}
 
 void safelist_add(safelist_t *sl, void *datum) {
   safelist_t *f = NULL;

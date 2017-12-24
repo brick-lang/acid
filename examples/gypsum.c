@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "stack.h"
+#include "../src/task.h"
 
 extern atomic_uint_fast64_t acid_world_count;
 extern atomic_uint_fast64_t acid_collect_count;
@@ -77,8 +78,11 @@ void stack_test() {
 int main(int argc, char** argv) {
   acid_setup();
   for (int i = 0; i < 4096; i++) {
+    printf("\r[%d/4096]",i+1);
+    fflush(stdout);
     stack_test();
   }
+  printf("\n");
   acid_teardown();
   printf("Total number of objects created: %lu\n", acid_world_count);
   printf("Total number of objects collected: %lu\n", acid_collect_count);

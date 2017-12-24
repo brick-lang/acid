@@ -10,7 +10,7 @@
  * Conforms to lockable_t interface
  */
 typedef struct safelist_t {
-  idlock_t lock;
+  idlock_t *lock;
   counter_t *const count;
   List *const data;  // List<Object>
   struct safelist_t *_forward;

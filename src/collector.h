@@ -8,7 +8,7 @@
 #include "object.h"
 
 typedef struct collector_t {
-  idlock_t lock; // part of the 'lockable' interface.
+  idlock_t *lock; // part of the 'lockable' interface.
   counter_t *const count;
 
   safelist_t collect;

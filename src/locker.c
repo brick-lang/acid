@@ -76,7 +76,7 @@ static void locker_start(size_t locks_count, void *locks[]) {
   for (int i = 0; i < locks_count; i++) {
     if (locks[i] != NULL) {  // remove any nulls
       lockable_t *lockable = locks[i];
-      filtered_locks[filtered_locks_count++] = &lockable->lock;
+      filtered_locks[filtered_locks_count++] = lockable->lock;
     }
   }
   if (filtered_locks_count > 1) {

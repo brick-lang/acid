@@ -4,7 +4,7 @@
 #include "worker.h"
 #include "threads.h"
 
-#define NUM_WORKERS 8
+#define NUM_WORKERS 1
 
 static thrd_t WORKERS[NUM_WORKERS];
 static mtx_t work_sychro_mutex;

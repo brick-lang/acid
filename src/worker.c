@@ -3,21 +3,23 @@
 #include "locker.h"
 #include "worker.h"
 #include "threads.h"
+#include "memory.h"
 
-#define NUM_WORKERS 8
-
-static thrd_t WORKERS[NUM_WORKERS];
+static int g_num_workers = 0;
+static thrd_t *workers;
 static mtx_t work_sychro_mutex;
 static List *work;  // List<task_t>
 static atomic_bool endtime = false;
 
 static int worker_run(void *);
 
-void workers_setup() {
+void workers_setup(int num_workers) {
+  g_num_workers = num_workers;
+  workers = xmalloc(sizeof(thrd_t) * num_workers, "workers_setup");
   list_new(&work);
   mtx_init(&work_sychro_mutex, mtx_plain | mtx_recursive);
-  for (int i = 0; i < NUM_WORKERS; i++) {
-    thrd_create(&WORKERS[i], worker_run, NULL);
+  for (int i = 0; i < num_workers; i++) {
+    thrd_create(&workers[i], worker_run, NULL);
   }
 }
 
@@ -27,14 +29,15 @@ void workers_setup() {
  */
 void workers_teardown() {
   endtime = true;
-  for (int i = 0; i < NUM_WORKERS; i++) {
-    thrd_join(WORKERS[i], NULL);
+  for (int i = 0; i < g_num_workers; i++) {
+    thrd_join(workers[i], NULL);
   }
 
   mtx_lock(&work_sychro_mutex);
   list_destroy(work);
   mtx_unlock(&work_sychro_mutex);
   mtx_destroy(&work_sychro_mutex);
+  free(workers);
 }
 
 /**

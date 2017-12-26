@@ -6,10 +6,10 @@
 #include "task.h"
 #include "worker.h"
 
-void acid_setup() {
+void acid_setup(int num_threads) {
   locker_setup();
   task_setup();
-  workers_setup();
+  workers_setup(num_threads);
 }
 
 void acid_teardown_nonblocking() {

@@ -10,7 +10,7 @@ typedef const void *acid_t;
 struct acid_header_t;  // forward declaration
 extern void object_set(struct acid_header_t *, size_t, struct acid_header_t *);
 
-void acid_setup();
+void acid_setup(int num_threads);
 void acid_teardown_nonblocking();
 void acid_teardown();
 

@@ -9,7 +9,7 @@
 
 typedef struct collector_t {
   idlock_t lock; // part of the 'lockable' interface.
-  counter_t count;
+  counter_t *const count;
 
   safelist_t collect;
   safelist_t merged_list;

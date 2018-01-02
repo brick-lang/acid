@@ -24,7 +24,7 @@ void safelist_add(safelist_t *sl, void *datum) {
 
   locker_start1(sl);
   if (sl->_forward == NULL) {
-    sl->count->store_count++;
+    counter_inc_store(sl->count);
     list_add(sl->data, datum);
   } else {
     f = sl->_forward;
@@ -54,7 +54,7 @@ void *safelist_poll(safelist_t *sl) {
   if (list_size(sl->data) == 0) {
     retval = NULL;
   } else {
-    sl->count->store_count--;
+    counter_dec_store(sl->count);
     list_remove_first(sl->data, &retval);
   }
   locker_end();

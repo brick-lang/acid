@@ -21,7 +21,6 @@
 #ifndef COLLECTIONS_C_HASHTABLE_H
 #define COLLECTIONS_C_HASHTABLE_H
 
-#include "array.h"
 #include "common.h"
 
 #define KEY_LENGTH_VARIABLE  -1
@@ -130,9 +129,6 @@ bool          hashtable_contains_key    (HashTable *table, void *key);
 size_t        hashtable_size            (HashTable *table);
 size_t        hashtable_capacity        (HashTable *table);
 
-enum cc_stat  hashtable_get_keys        (HashTable *table, Array **out);
-enum cc_stat  hashtable_get_values      (HashTable *table, Array **out);
-
 size_t        hashtable_hash_string     (const void *key, int len, uint32_t seed);
 size_t        hashtable_hash            (const void *key, int len, uint32_t seed);
 size_t        hashtable_hash_ptr        (const void *key, int len, uint32_t seed);
@@ -153,11 +149,6 @@ enum cc_stat  hashtable_iter_remove     (HashTableIter *iter, void **out);
         while (hashtable_iter_next(&hashtable_iter_53d46d2a04458e7b, &entry) != CC_ITER_END) \
             body                                                        \
     }
-
-
-#define GENERAL_HASH hashtable_hash
-#define STRING_HASH  hashtable_hash_string
-#define POINTER_HASH hashtable_hash_ptr
 
 
 #endif /* COLLECTIONS_C_HASHTABLE_H */

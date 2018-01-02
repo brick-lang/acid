@@ -325,7 +325,7 @@ int main(int argc, char** argv) {
   timespec_get(&wall_start, TIME_UTC);
   clock_t start = clock() / (CLOCKS_PER_SEC / 1000);
 
-  acid_setup();
+  acid_start(1);
 
   test1();
   slist_create();
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
   }
   printf("\n");
 
-  acid_teardown();
+  acid_stop();
 
   clock_t end = clock() / (CLOCKS_PER_SEC / 1000);
 

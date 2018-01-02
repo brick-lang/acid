@@ -3,10 +3,9 @@
 #include "locker.h"
 #include "worker.h"
 #include "threads.h"
+#include "memory.h"
 
-#define NUM_WORKERS 1
-
-static thrd_t WORKERS[NUM_WORKERS];
+static thrd_t worker;
 static mtx_t work_sychro_mutex;
 static List *work;  // List<task_t>
 static atomic_bool endtime = false;
@@ -16,9 +15,7 @@ static int worker_run(void *);
 void workers_setup() {
   list_new(&work);
   mtx_init(&work_sychro_mutex, mtx_plain | mtx_recursive);
-  for (int i = 0; i < NUM_WORKERS; i++) {
-    thrd_create(&WORKERS[i], worker_run, NULL);
-  }
+  thrd_create(&worker, worker_run, NULL);
 }
 
 /**
@@ -27,9 +24,7 @@ void workers_setup() {
  */
 void workers_teardown() {
   endtime = true;
-  for (int i = 0; i < NUM_WORKERS; i++) {
-    thrd_join(WORKERS[i], NULL);
-  }
+  thrd_join(worker, NULL);
 
   mtx_lock(&work_sychro_mutex);
   list_destroy(work);

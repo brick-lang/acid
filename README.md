@@ -9,37 +9,37 @@ Acid is an implementation of the Brandt reference-counting GC algorithm in C, sp
 At its heart, Acid provides these functions for use:
 
 ```c
-// World functions
-void acid_setup();
-void acid_teardown();
-void acid_teardown_nonblocking();
+// Global functions
+void acid_start(int num_threads);
+void acid_stop();
+void acid_stop_nonblocking();
 
-// Core functions
+// Memory functions
 void *acid_malloc(size_t alloc_size);
 void *acid_malloc_dtor(size_t alloc_size, void (*dtor)(void*));
+void acid_harden(void *ptr);
 void acid_dissolve(void *ptr);
 
+// Assignment operators
+#define acid_set(lhs, rhs);
+#define acid_set_field(struct, field, rhs);
+
 // Accessory functions
-void acid_set(void* var, void* val);
-#define acid_set_field(type, field, val);
 bool acid_is_managed(void *ptr);
 ```  
 
-### World functions
-Acid's world is composed of (by default) 8 individual worker threads, a lock coordinator
-for each thread, a tasks queue, and a total running-tasks counter. Constructing the world is as easy
-as calling `acid_setup()` at the beginning of your program.
+### Global functions
+Acid's world is composed of a number of worker threads, a lock coordinator
+for each thread, a global tasks queue, and a total running-tasks counter. Constructing the world is as easy
+as calling `acid_start(int)` at the beginning of your program.
 
-Deconstructing the world is achieved through `acid_teardown()`. It is a blocking
+Deconstructing the world is achieved through `acid_stop()`. It is a blocking
 call, waiting on any remaining tasks to complete before `join`ing the worker threads
-back to the main thread and returning. There is also an `acid_teardown_nonblocking()`
+back to the main thread and returning. There is also an `acid_stop_nonblocking()`
 that does *not* complete any remaining collections and destroys the
 environment immediately.
 
 ### Memory functions
-Acid provides two main memory functions: `acid_malloc(size_t)` and `acid_dissolve(void*)`, and a
-third `acid_malloc_dtor(size_t, void(*)(void*))` that extends the functionality of the first.
-
 `acid_malloc(size_t)` is intended to be used as a drop-in replacement for libc's own `malloc`.
 When called with a size, it returns a pointer to a matching allocated memory space. In reality,
 this memory space also has a hidden header that is used for storing reference information.
@@ -90,19 +90,23 @@ void scenario1_attr() {
 }
 ```
 
-### Auxiliary functions
-These functions are what make Acid truly powerful. They operate on an Acid-managed
-pointer, replacing the standard assignment operator `=`. The first two are simple macros
-wrapping functions, the third is a convenience function.
+More precisely, `acid_dissolve(void*)` decrements the reference's strong count.
+To manually increment the reference count, `acid_harden(void*)` is provided. This
+is useful in certain circumstances, such as recursive algorithms.
 
-`acid_set_field(type, field, acid_val)` is used to set a field of an Acid-managed
+### Assignment operators
+These functions are what make Acid truly powerful. They operate on an Acid-managed
+pointer, replacing the standard assignment operator `=`.
+
+`acid_set_field(struct, field, acid_val)` is used to set a field of an Acid-managed
 reference to another Acid-managed reference. Under the hood, it creates a link between
 the two, incrementing the receiver's reference count.
 
-For something like `Obj *o1 = o2;`, `acid_set(acid_l, acid_r)` is used. It decrements
+For something like `Obj *o1; o1 = o2;`, `acid_set(acid_l, acid_r)` is used. It decrements
 the existing reference (if there is one), sets the variable, and increments the new
 reference to match.
 
+### Accessory functions
 The utility function `acid_is_managed(void*)` is provided for testing if a reference
 is managed by Acid or not.
 
@@ -127,14 +131,14 @@ Point* simplecycle() {
 }
 
 int main(int argc, char** argv) {
-  acid_setup();
+  acid_start();
 
   Point* p = simplecycle();
   printf("{%p| x:{%p| x:%p y:%p} y:%p}\n",
          (void*)p, p->x, ((Point*)p->x)->x, ((Point*)p->x)->y, p->y);
   acid_dissolve(p);
 
-  acid_teardown();
+  acid_stop();
   exit(0);
 }
 ```
@@ -144,6 +148,12 @@ int main(int argc, char** argv) {
 For the reference implementation, see: [MultiThreadBrownbridge](https://github.com/stevenrbrandt/MultiThreadBrownbridge)
 
 The full paper behind this collector is based on is in the docs folder.
+
+## Known Issues
+* There's a race condition in the `object_phantomize_node` over an object's links that
+  occurs when an object is simulateously being curated by the collector and deleted
+  (as they are two individual tasks able to be executed by two separate threads).
+  Current working solution: Use a small number of collector threads (1 or 2).
 
 --------------------------
 

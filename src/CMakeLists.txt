@@ -1,12 +1,16 @@
-add_library(acid
-        acid.c idlock.c locker.c link.c
+add_library(acid_internal STATIC
+        idlock.c locker.c link.c
         object.c collector.c safelist.c
-        task.c worker.c memory.c
-        $<TARGET_OBJECTS:collectc> counter.c)
+        task.c worker.c memory.c counter.c)
+
+set_target_properties(acid_internal PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(acid_internal PROPERTIES C_VISIBILITY_PRESET hidden)
+
+add_library(acid acid.c)
+target_link_libraries(acid acid_internal collectc)
 
 if(NOT HAVE_THREADS_H)
-  target_sources(acid PUBLIC $<TARGET_OBJECTS:tinycthread>)
-  target_link_libraries(acid ${CMAKE_THREAD_LIBS_INIT})
+  target_link_libraries(acid_internal tinycthread)
 endif()
 
 set_target_properties(acid PROPERTIES PUBLIC_HEADER "../include/acid.h")

@@ -6,32 +6,26 @@
 #include "task.h"
 #include "worker.h"
 
-void acid_setup(int num_threads) {
+void acid_start(int num_threads) {
   locker_setup();
   task_setup();
   workers_setup(num_threads);
 }
 
-void acid_teardown_nonblocking() {
+void acid_stop_nonblocking() {
   workers_teardown();
   task_teardown();
   locker_teardown();
 }
 
-void acid_teardown() {
+void acid_stop() {
   task_wait_for_zero_threads();
-  acid_teardown_nonblocking();
+  acid_stop_nonblocking();
 }
 
 void *acid_malloc(size_t alloc_size) {
   // | Object (header) | datum...
   void *fullspace = xmalloc(sizeof(Object) + alloc_size, "acid_malloc");
-
-  /* // act like malloc, and fail fast */
-  /* if (fullspace == NULL) { */
-  /*   fprintf(stderr, "acid_malloc: ERROR! Out of memory.\n"); */
-  /*   return NULL; */
-  /* } */
 
   Object *o = object_init_strong(fullspace);
   void *data_section = (void *)((intptr_t)fullspace + sizeof(Object));
@@ -46,24 +40,22 @@ void *acid_malloc_dtor(size_t alloc_size, void (*dtor)(void *)) {
 }
 
 void acid_harden(const void *ptr) {
-  if (acid_is_managed(ptr)) {
-    Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
-    locker_start1(obj_addr);
-    object_inc_strong(obj_addr);
-    locker_end();
-  }
+  Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
+  locker_start1(obj_addr);
+  object_inc_strong(obj_addr);
+  locker_end();
 }
 
 void acid_dissolve(const void *ptr) {
-  if (acid_is_managed(ptr)) {
-    Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
-    locker_start1(obj_addr);
-    object_dec_strong(obj_addr);
-    locker_end();
-  }
+  Object *obj_addr = (Object *)((intptr_t)ptr - sizeof(Object));
+  locker_start1(obj_addr);
+  object_dec_strong(obj_addr);
+  locker_end();
 }
 
-void _acid_dissolve_cleanup(void *ptr) { acid_dissolve(*(void **)ptr); }
+inline void _acid_dissolve_cleanup(const void *ptr) {
+  acid_dissolve(*(const void **)ptr);
+}
 
 // var = val;
 void _acid_set_raw(const void **var, const void *val) {
